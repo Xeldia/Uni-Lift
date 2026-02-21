@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 20% 97%;
+  --foreground: 220 20% 10%;
+
+  --muted: 220 15% 90%;
+  --muted-foreground: 220 10% 45%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 10%;
+
+  --border: 220 20% 20%;
+  --input: 220 20% 20%;
+
+  --primary: 220 70% 50%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 280 60% 55%;
+  --secondary-foreground: 0 0% 100%;
+
+  --accent: 180 60% 50%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  --ring: 220 70% 50%;
+
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 220 20% 8%;
+  --foreground: 220 10% 95%;
+
+  --muted: 220 15% 15%;
+  --muted-foreground: 220 10% 65%;
+
+  --popover: 220 20% 10%;
+  --popover-foreground: 220 10% 95%;
+
+  --card: 220 20% 12%;
+  --card-foreground: 220 10% 95%;
+
+  --border: 220 15% 25%;
+  --input: 220 15% 25%;
+
+  --primary: 220 70% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 280 60% 60%;
+  --secondary-foreground: 0 0% 100%;
+
+  --accent: 180 60% 55%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --ring: 220 70% 55%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    font-family: 'Geist Mono', monospace;
+  }
+  body {
+    @apply text-foreground;
+    background: linear-gradient(135deg, hsl(220, 20%, 8%) 0%, hsl(220, 20%, 15%) 50%, hsl(220, 25%, 10%) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  button {
+    @apply border border-border rounded-lg bg-card text-card-foreground px-4 py-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+  input, textarea, select {
+    @apply border border-border rounded-lg bg-card text-card-foreground px-3 py-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-200 shadow-sm;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent font-bold;
+  }
+}
+
+@layer components {
+  .card-wireframe {
+    @apply border border-border bg-card/80 backdrop-blur-sm p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200;
+  }
+  
+  .sos-button {
+    @apply border-2 border-destructive font-bold text-lg p-6 bg-gradient-to-br from-destructive to-destructive/80 text-destructive-foreground rounded-xl hover:scale-105 hover:shadow-2xl hover:shadow-destructive/50 transition-all duration-200;
+  }
+  
+  .gradient-border {
+    position: relative;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)));
+    padding: 2px;
+    border-radius: 0.75rem;
+  }
+  
+  .gradient-border-inner {
+    @apply bg-card rounded-[0.65rem];
+  }
+}
