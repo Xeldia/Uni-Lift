@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Users, Car, AlertTriangle, TrendingUp, CheckCircle, XCircle } from "lucide-react";
+import { Users, Car, AlertTriangle, TrendingUp, CheckCircle } from "lucide-react";
 
 export default function AdminPage() {
   const { user } = useAuth();

@@ -6,8 +6,7 @@ import {
   MapPin, 
   Car, 
   Shield, 
-  Menu,
-  X
+  Menu
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

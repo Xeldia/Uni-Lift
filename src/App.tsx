@@ -5,8 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navigation } from "@/components/Navigation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-
-import AuthPage from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import RideDetail from "@/pages/RideDetail";
 import AdminPage from "@/pages/Admin";
@@ -17,8 +15,6 @@ function Router() {
     <div className="min-h-screen bg-background font-sans">
       <Navigation />
       <Switch>
-        <Route path="/auth" component={AuthPage} />
-        
         <Route path="/">
           <Redirect to="/dashboard" />
         </Route>

@@ -1,8 +1,54 @@
 import { useNavigate } from "react-router";
+import { useEffect, useMemo, useState } from "react";
 import imgLogo from "figma:asset/cf24a05d7bab431c95d30e2583597f4692c35574.png";
+import { signOut, supabase } from "../../lib/supabase";
 
 export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
   const navigate = useNavigate();
+  const [displayName, setDisplayName] = useState("USER");
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if (!user) {
+        setDisplayName("USER");
+        return;
+      }
+
+      const metadataName = user.user_metadata?.full_name;
+      if (typeof metadataName === "string" && metadataName.trim().length > 0) {
+        setDisplayName(metadataName.trim());
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setDisplayName(profile?.full_name || user.email?.split("@")[0] || "USER");
+    };
+
+    loadUser();
+  }, []);
+
+  const initials = useMemo(
+    () =>
+      displayName
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2),
+    [displayName],
+  );
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="bg-white h-[52px] shrink-0 w-full border-b border-black relative z-10">
@@ -58,6 +104,17 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
               MESSAGES
             </span>
           </button>
+
+          <button
+            onClick={() => navigate("/settings")}
+            className={`h-full px-5 flex items-center gap-2 border-b-2 transition-colors ${
+              activePage === "settings" ? "border-black" : "border-transparent"
+            }`}
+          >
+            <span className={`font-mono text-[10px] tracking-[0.5px] ${activePage === "settings" ? "text-black" : "text-[#666]"}`}>
+              SETTINGS
+            </span>
+          </button>
         </div>
 
         {/* Right Controls */}
@@ -107,16 +164,16 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
           </button>
 
           {/* User Badge */}
-          <div className="border border-black h-[30px] flex items-center gap-2 px-2">
+          <button onClick={() => navigate("/profile")} className="border border-black h-[30px] flex items-center gap-2 px-2 hover:bg-gray-50 transition-colors">
             <div className="bg-black size-5 flex items-center justify-center">
-              <span className="font-mono text-[8px] text-white">SJ</span>
+              <span className="font-mono text-[8px] text-white">{initials}</span>
             </div>
-            <span className="font-mono text-[9px] text-[#0a0a0a] tracking-[0.2px]">SARAH</span>
-          </div>
+            <span className="font-mono text-[9px] text-[#0a0a0a] tracking-[0.2px] max-w-[72px] truncate">{displayName.split(" ")[0]?.toUpperCase() || "USER"}</span>
+          </button>
 
           {/* Logout */}
           <button
-            onClick={() => navigate("/")}
+            onClick={handleLogout}
             className="size-[26px] flex items-center justify-center hover:bg-gray-100 transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

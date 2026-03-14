@@ -1,6 +1,6 @@
 import { useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, User, MapPin, Clock, DollarSign, Star, Phone, Mail } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Star, Phone, Mail } from "lucide-react";
 import { Link } from "wouter";
 
 export default function RideDetail() {

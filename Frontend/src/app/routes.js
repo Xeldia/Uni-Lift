@@ -2,6 +2,8 @@ import { createBrowserRouter } from "react-router";
 import { LoginPage } from "./pages/LoginPage";
 import { HomePage } from "./pages/HomePage";
 import { MessagesPage } from "./pages/MessagesPage";
+import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { VerificationsPage } from "./pages/VerificationsPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -13,6 +15,8 @@ export const router = createBrowserRouter([
   { path: "/", Component: LoginPage },
   { path: "/home", Component: HomePage },
   { path: "/messages", Component: MessagesPage },
+  { path: "/settings", Component: Settings },
+  { path: "/profile", Component: Profile },
   
   // Admin Routes
   { path: "/admin", Component: AdminDashboardPage },

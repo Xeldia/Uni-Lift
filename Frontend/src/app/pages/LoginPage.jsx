@@ -5,6 +5,27 @@ import imgSystemText from "figma:asset/9bd888463ca9367ff14ba6b7ad16ee6a7d8a7be9.
 import imgShield from "figma:asset/441daa1dae41629e2a7035f925ccb7f3a7efff67.png";
 import { signIn, signUp } from "../../lib/supabase";
 
+const normalizeEmail = (email) => email.trim().toLowerCase();
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+function mapAuthError(message) {
+  const lower = (message || "").toLowerCase();
+
+  if (lower.includes("invalid") && lower.includes("email")) {
+    return "Invalid email format. Use a valid address like name@cit.edu.";
+  }
+
+  if (lower.includes("rate limit") || lower.includes("too many requests")) {
+    return "Too many signup attempts. Please wait a minute, then try again.";
+  }
+
+  if (lower.includes("invalid login credentials")) {
+    return "Invalid email or password.";
+  }
+
+  return message || "Authentication failed. Please try again.";
+}
+
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function MailIcon() {
   return (
@@ -83,11 +104,13 @@ function LoginForm({ onSwitchToSignup }) {
   const [error, setError] = useState("");
 
   const handleSignIn = async () => {
-    if (!email || !password) { setError("Email and password are required."); return; }
+    const emailValue = normalizeEmail(email);
+    if (!emailValue || !password) { setError("Email and password are required."); return; }
+    if (!isValidEmail(emailValue)) { setError("Invalid email format. Use a valid address like name@cit.edu."); return; }
     setLoading(true); setError("");
-    const { data, error: err } = await signIn(email, password);
+    const { data, error: err } = await signIn(emailValue, password);
     setLoading(false);
-    if (err) { setError(err.message); return; }
+    if (err) { setError(mapAuthError(err.message)); return; }
     if (data?.user) navigate("/home");
   };
 
@@ -179,17 +202,28 @@ function RegisterForm({ onSwitchToLogin }) {
   const [success, setSuccess] = useState("");
 
   const handleRegister = async () => {
+    const emailValue = normalizeEmail(email);
     if (!agreedTerms) return;
     if (password !== verifyPassword) { setError("Passwords do not match."); return; }
-    if (!fullName || !email || !studentId || !password) { setError("All fields are required."); return; }
+    if (!fullName || !emailValue || !studentId || !password) { setError("All fields are required."); return; }
+    if (!isValidEmail(emailValue)) { setError("Invalid email format. Use a valid address like name@cit.edu."); return; }
     setLoading(true); setError(""); setSuccess("");
-    const { data, error: err } = await signUp(email, password, fullName, studentId);
-    if (err) { setLoading(false); setError(err.message); return; }
-    if (data?.user?.identities?.length === 0) { setLoading(false); setError("Email already registered."); return; }
+    const { data, error: err } = await signUp(emailValue, password, fullName.trim(), studentId.trim());
+    if (err) { setLoading(false); setError(mapAuthError(err.message)); return; }
+    if (!data?.user) { setLoading(false); setError("Registration failed. Please try again."); return; }
     // Auto sign-in immediately after registration (no email confirmation needed)
-    const { data: loginData, error: loginErr } = await signIn(email, password);
+    const { data: loginData, error: loginErr } = await signIn(emailValue, password);
     setLoading(false);
-    if (loginErr) { setError(loginErr.message); return; }
+    if (loginErr) {
+      const message = mapAuthError(loginErr.message || "Authentication failed.");
+      if (/confirm|verification|verify/i.test(message)) {
+        setSuccess("Account created. Check your email to confirm, then sign in.");
+        setActiveTab("login");
+        return;
+      }
+      setError(message);
+      return;
+    }
     if (loginData?.user) navigate("/home");
   };
 
@@ -284,16 +318,16 @@ export function LoginPage() {
   const [activeTab, setActiveTab] = useState("login");
 
   return (
-    <div className="bg-white min-h-screen flex flex-col font-mono">
+    <div className="bg-white h-screen flex flex-col font-mono overflow-hidden">
 
       {/* Header */}
-      <header className="h-[63px] shrink-0 border-b border-[#f3f4f6] flex items-center justify-between px-6">
-        <img src={imgLogo} alt="Uni-Lift" className="h-[38px] w-[159px] object-contain object-left" />
-        <span className="font-mono text-[12px] text-black tracking-[0.6px]">{"{ AUTH REQUIRED }"}</span>
+      <header className="h-[52px] shrink-0 border-b border-black flex items-center justify-between px-4">
+        <img src={imgLogo} alt="Uni-Lift" className="h-[30px] w-[134px] object-contain object-left" />
+        <span className="font-mono text-[10px] text-[#6a7282] tracking-[0.8px]">UNI-LIFT ACCESS PORTAL</span>
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col items-center justify-center py-8">
+      <main className="flex-1 flex flex-col items-center justify-center py-6 overflow-y-auto">
         <div className="w-[560px] flex flex-col gap-5">
 
           {/* Auth Card */}
@@ -356,7 +390,7 @@ export function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="h-[40px] shrink-0 border-t border-[#f3f4f6] flex items-center justify-between px-6">
+      <footer className="h-[40px] shrink-0 border-t border-black/20 flex items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <img src={imgShield} alt="" className="h-3 w-[13px] opacity-60 object-cover" />
           <span className="font-mono text-[10px] text-[#6a7282]">Protected by University Authentication Protocol</span>

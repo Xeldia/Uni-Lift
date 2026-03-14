@@ -47,12 +47,18 @@ This application follows a strict "Minimalist Wireframe" aesthetic:
 npm install
 ```
 
-2. Start the development server:
+2. Create a root `.env` file with your Supabase project credentials:
+```bash
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+3. Start the development server:
 ```bash
 npm run dev
 ```
 
-3. Open your browser and navigate to `http://localhost:5000`
+4. Open your browser and navigate to `http://localhost:5000`
 
 ### Building for Production
 
@@ -98,9 +104,11 @@ uni-lift/
 - **Driver** - Can offer rides and manage their ride offerings  
 - **Admin** - Can manage users, rides, and view system analytics
 
-## Demo Credentials
+## Authentication Notes
 
-For testing, any email/password combination will work. Use an email containing "admin" to log in as an admin.
+- Authentication uses Supabase Auth (`signUp`, `signInWithPassword`, `signOut`)
+- User profile rows are synced to `public.users`
+- Email addresses containing `admin` are still interpreted as admin in local role normalization fallback
 
 ## License
 
