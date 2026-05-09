@@ -1,12 +1,10 @@
 services:
-  # ── Backend: Node.js API ──────────────────────────────────────────────────────
+  # ── Backend: Docker ───────────────────────────────────────────────────────────
   - type: web
     name: unilift-backend
-    runtime: node
+    runtime: docker
     rootDir: Backend
-    buildCommand: npm ci && npm run build
-    startCommand: node dist/index.js
-    healthCheckPath: /health
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,13 +15,19 @@ services:
       - key: CORS_ORIGIN
         sync: false
 
-  # ── Frontend: Static Site (served via `serve`) ───────────────────────────────
+  # ── Frontend: Docker (Vite build + serve) ─────────────────────────────────────
   - type: web
     name: unilift-frontend
-    runtime: node
+    runtime: docker
     rootDir: Frontend
-    buildCommand: npm ci && npm run build
-    startCommand: npx serve -s dist -l $PORT
+    dockerfilePath: ./Dockerfile
+    dockerBuildArgs:
+      - key: VITE_SUPABASE_URL
+        value: ""
+      - key: VITE_SUPABASE_ANON_KEY
+        value: ""
+      - key: VITE_API_BASE_URL
+        value: ""
     envVars:
       - key: VITE_SUPABASE_URL
         sync: false
