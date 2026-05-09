@@ -114,11 +114,29 @@ export async function signIn(email: string, password: string, stayActive = true)
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (!error && data?.user) {
-    const { data: profile } = await supabase
+    let profile: {
+      account_status?: string | null;
+      suspend_reason?: string | null;
+      suspended_until?: string | null;
+    } | null = null;
+
+    const profileWithSuspension = await supabase
       .from("users")
       .select("account_status, suspend_reason, suspended_until")
       .eq("id", data.user.id)
       .maybeSingle();
+
+    if (profileWithSuspension.error) {
+      // Backward-compatible fallback: old DBs may not have suspended_until yet.
+      const fallback = await supabase
+        .from("users")
+        .select("account_status, suspend_reason")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      profile = (fallback.data as any) ?? null;
+    } else {
+      profile = (profileWithSuspension.data as any) ?? null;
+    }
 
     const status = (profile?.account_status ?? "ACTIVE").toString().toUpperCase();
     const suspendedUntilIso = profile?.suspended_until ?? null;
