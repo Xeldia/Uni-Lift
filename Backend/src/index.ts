@@ -3,12 +3,13 @@ import express from "express";
 import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 
 import usersRouter from "./features/users/users.controller.js";
 import ridesRouter from "./features/rides/rides.controller.js";
 import verificationsRouter from "./features/admin/verifications/verifications.controller.js";
 import sosRouter from "./features/admin/sos/sos.controller.js";
-import { sendSuccess } from "./core/common/api-response.js";
+import { sendError, sendSuccess } from "./core/common/api-response.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -40,12 +41,32 @@ app.use("/api/rides", ridesRouter);
 app.use("/api/verifications", verificationsRouter);
 app.use("/api/sos", sosRouter);
 
+// Explicit API 404 (don't fall through to SPA index)
+app.use("/api", (_req, res) => {
+  sendError(res, 404, "API route not found");
+});
+
 // ─── Frontend static files (production) ──────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "..", "public");
-app.use(express.static(publicDir));
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
+const candidateStaticDirs = [
+  path.join(__dirname, "..", "public"),          // Docker runtime (/app/public)
+  path.join(process.cwd(), "public"),            // direct runtime in repo root
+  path.join(process.cwd(), "Frontend", "dist"),  // non-docker monorepo run
+];
+const staticDir = candidateStaticDirs.find((dir) => existsSync(path.join(dir, "index.html")));
+
+if (staticDir) {
+  app.use(express.static(staticDir));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(staticDir, "index.html"));
+  });
+} else {
+  console.warn("[BACKEND] No frontend build found. Checked:", candidateStaticDirs);
+}
+
+// ─── Global 404 fallback ──────────────────────────────────────────────────────
+app.use((_req, res) => {
+  sendError(res, 404, "Route not found");
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
