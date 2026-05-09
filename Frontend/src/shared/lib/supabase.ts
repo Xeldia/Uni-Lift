@@ -648,7 +648,7 @@ export async function acceptRiderPricedRide(rideId: string, driverId: string) {
  * Requires a `notifications` table in Supabase (see SQL below).
  */
 export async function createNotification(userId: string, title: string, body: string, meta?: object) {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("notifications")
     .insert({
       user_id: userId,
@@ -657,10 +657,8 @@ export async function createNotification(userId: string, title: string, body: st
       metadata: meta ?? {},
       read: false,
       created_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-  return { data, error };
+    });
+  return { data: null, error };
 }
 
 /**

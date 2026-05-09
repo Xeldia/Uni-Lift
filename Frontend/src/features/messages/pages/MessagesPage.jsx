@@ -161,7 +161,7 @@ function ChatMessage({ msg, canApprove = false, onConfirm, onDecline }) {
 export function MessagesPage() {
   const { driverId } = useParams();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("RIDER");
+  const [mode, setMode] = useState(() => localStorage.getItem("uni_lift_app_mode") === "DRIVER" ? "DRIVER" : "RIDER");
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [offerModalOpen, setOfferModalOpen] = useState(false);
@@ -269,8 +269,7 @@ export function MessagesPage() {
   );
   const isCurrentUserRequestSender = Boolean(
     activeConv && selfUserId && (
-      (mode === "RIDER" && selfUserId === activeConv.riderId) ||
-      (mode === "DRIVER" && selfUserId === activeConv.driverId)
+      selfUserId === activeConv.riderId
     )
   );
   const isCurrentUserDriver = Boolean(activeConv && selfUserId && selfUserId === activeConv.driverId);
@@ -338,7 +337,11 @@ export function MessagesPage() {
       <Navigation
         activePage="messages"
         mode={mode}
-        onModeToggle={(targetMode) => setMode(targetMode)}
+        onModeToggle={(targetMode) => {
+          const nextMode = targetMode === "DRIVER" ? "DRIVER" : "RIDER";
+          setMode(nextMode);
+          localStorage.setItem("uni_lift_app_mode", nextMode);
+        }}
       />
 
       <div className="flex-1 flex overflow-hidden">

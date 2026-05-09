@@ -31,7 +31,7 @@ const ICON_USER = (
 export default function Settings() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("account");
-  const [mode, setMode] = useState("RIDER");
+  const [mode, setMode] = useState(() => localStorage.getItem("uni_lift_app_mode") === "DRIVER" ? "DRIVER" : "RIDER");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -222,7 +222,11 @@ export default function Settings() {
         <Navigation
           activePage="settings"
           mode={mode}
-          onModeToggle={(targetMode) => setMode(targetMode)}
+          onModeToggle={(targetMode) => {
+            const nextMode = targetMode === "DRIVER" ? "DRIVER" : "RIDER";
+            setMode(nextMode);
+            localStorage.setItem("uni_lift_app_mode", nextMode);
+          }}
         />
         <div className="flex-1 overflow-y-auto">
           <TerminalContainer title="SYSTEM SETTINGS" subtitle="Loading account..." maxWidth="740px">
@@ -238,7 +242,11 @@ export default function Settings() {
       <Navigation
         activePage="settings"
         mode={mode}
-        onModeToggle={(targetMode) => setMode(targetMode)}
+        onModeToggle={(targetMode) => {
+          const nextMode = targetMode === "DRIVER" ? "DRIVER" : "RIDER";
+          setMode(nextMode);
+          localStorage.setItem("uni_lift_app_mode", nextMode);
+        }}
       />
       <div className="flex-1 overflow-y-auto">
         <TerminalContainer title="SYSTEM SETTINGS" subtitle="Configure Terminal Preferences" maxWidth="740px">
