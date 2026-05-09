@@ -21,13 +21,15 @@ const allowedOrigins = new Set(
 );
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(cors({
+const apiCors = cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.has(origin)) callback(null, true);
     else callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
-}));
+});
+// Apply CORS only to API routes. Static frontend assets should not be blocked by CORS checks.
+app.use("/api", apiCors);
 app.use(express.json({ limit: "10mb" }));
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
