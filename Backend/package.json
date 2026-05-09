@@ -7,7 +7,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "check:build": "npm run build",
+    "reset:users": "tsx src/scripts/reset-users.ts",
+    "create:admin": "tsx src/scripts/create-admin.ts",
+    "smoke:health": "node -e \"fetch(process.env.BACKEND_URL || 'http://localhost:3001/health').then(r=>r.json()).then(d=>{console.log(d); if(!d?.success) process.exit(1);}).catch(()=>process.exit(1))\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

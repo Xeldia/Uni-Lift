@@ -13,9 +13,10 @@
     full_name     TEXT NOT NULL,
     student_id    TEXT UNIQUE NOT NULL,
     phone_number  TEXT,
-    role          TEXT NOT NULL DEFAULT 'rider' CHECK (role IN ('rider', 'driver', 'both')),
+    role          TEXT NOT NULL DEFAULT 'rider' CHECK (role IN ('rider', 'driver', 'both', 'admin')),
     university    TEXT NOT NULL DEFAULT 'CIT-U',
     id_scan_url   TEXT,
+    avatar_url    TEXT,
     status        TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED', 'PENDING')),
     is_verified   BOOLEAN DEFAULT FALSE,
     rating        NUMERIC(3,2) DEFAULT 0,
@@ -68,6 +69,12 @@
     rider_id      UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     pickup        TEXT NOT NULL,
     dropoff       TEXT NOT NULL,
+    pickup_lat    NUMERIC(10,7),
+    pickup_lng    NUMERIC(10,7),
+    dropoff_lat   NUMERIC(10,7),
+    dropoff_lng   NUMERIC(10,7),
+    driver_lat    NUMERIC(10,7),
+    driver_lng    NUMERIC(10,7),
     fare          NUMERIC(8,2),
     status        TEXT NOT NULL DEFAULT 'SEARCHING'
                     CHECK (status IN ('SEARCHING','SCHEDULED','IN_TRANSIT','COMPLETED','CANCELLED')),
@@ -131,10 +138,10 @@
   ALTER TABLE public.sos_alerts    ENABLE ROW LEVEL SECURITY;
   ALTER TABLE public.messages      ENABLE ROW LEVEL SECURITY;
 
-  -- Users: anyone authenticated can read, only owner can update own row
-  CREATE POLICY "Users can read own profile"
+  -- Users: any authenticated user can read profiles (needed for search + conversation display)
+  CREATE POLICY "Authenticated users can read profiles"
     ON public.users FOR SELECT
-    USING (auth.uid() = id);
+    USING (auth.uid() IS NOT NULL);
 
   CREATE POLICY "Users can insert own profile"
     ON public.users FOR INSERT
@@ -203,3 +210,132 @@
   CREATE TRIGGER set_rides_updated_at
     BEFORE UPDATE ON public.rides
     FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+  -- ─── CONVERSATIONS TABLE ──────────────────────────────────────────────────────
+  -- One conversation per rider↔driver pair. Status tracks negotiation lifecycle.
+  CREATE TABLE IF NOT EXISTS public.conversations (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    rider_id         UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    driver_id        UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    status           TEXT NOT NULL DEFAULT 'REQUESTED'
+                       CHECK (status IN ('REQUESTED','NEGOTIATING','AGREED','COMPLETED','CANCELLED')),
+    pickup           TEXT,
+    dropoff          TEXT,
+    pickup_lat       NUMERIC,
+    pickup_lng       NUMERIC,
+    dropoff_lat      NUMERIC,
+    dropoff_lng      NUMERIC,
+    agreed_fare      NUMERIC,
+    ride_id          UUID REFERENCES public.rides(id) ON DELETE SET NULL,
+    last_message_at  TIMESTAMPTZ DEFAULT NOW(),
+    created_at       TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(rider_id, driver_id)
+  );
+
+  ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+
+  CREATE POLICY "Conversation participants can view"
+    ON public.conversations FOR SELECT
+    USING (auth.uid() = rider_id OR auth.uid() = driver_id);
+
+  CREATE POLICY "Riders can create conversations"
+    ON public.conversations FOR INSERT
+    WITH CHECK (auth.uid() = rider_id);
+
+  CREATE POLICY "Conversation participants can update"
+    ON public.conversations FOR UPDATE
+    USING (auth.uid() = rider_id OR auth.uid() = driver_id);
+
+
+  -- ─── EXTEND MESSAGES TABLE ───────────────────────────────────────────────────
+  -- Add conversation_id, message type, and offer negotiation columns.
+  -- Make ride_id nullable — messages can belong to a conversation without a ride.
+  ALTER TABLE public.messages
+    ADD COLUMN IF NOT EXISTS conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS type            TEXT NOT NULL DEFAULT 'text'
+                                               CHECK (type IN ('text','offer','system')),
+    ADD COLUMN IF NOT EXISTS offer_amount    NUMERIC,
+    ADD COLUMN IF NOT EXISTS offer_status    TEXT
+                                               CHECK (offer_status IN ('PENDING','COUNTERED','ACCEPTED','DECLINED'));
+
+  ALTER TABLE public.messages ALTER COLUMN ride_id DROP NOT NULL;
+
+  -- Update RLS: conversation participants can read all messages; only sender can insert
+  DROP POLICY IF EXISTS "Ride participants can message" ON public.messages;
+  DROP POLICY IF EXISTS "Conversation participants can message" ON public.messages;
+
+  -- SELECT: any participant can read all messages in their conversations
+  CREATE POLICY "Conversation participants can read messages"
+    ON public.messages FOR SELECT
+    USING (
+      conversation_id IN (
+        SELECT id FROM public.conversations
+        WHERE rider_id = auth.uid() OR driver_id = auth.uid()
+      )
+      OR ride_id IN (
+        SELECT id FROM public.rides
+        WHERE driver_id = auth.uid() OR rider_id = auth.uid()
+      )
+    );
+
+  -- INSERT: only the sender can insert their own messages
+  CREATE POLICY "Users can send messages"
+    ON public.messages FOR INSERT
+    WITH CHECK (
+      auth.uid() = sender_id
+      AND (
+        conversation_id IN (
+          SELECT id FROM public.conversations
+          WHERE rider_id = auth.uid() OR driver_id = auth.uid()
+        )
+        OR ride_id IN (
+          SELECT id FROM public.rides
+          WHERE driver_id = auth.uid() OR rider_id = auth.uid()
+        )
+      )
+    );
+
+  -- UPDATE: participants can update messages (offer status changes)
+  CREATE POLICY "Conversation participants can update messages"
+    ON public.messages FOR UPDATE
+    USING (
+      conversation_id IN (
+        SELECT id FROM public.conversations
+        WHERE rider_id = auth.uid() OR driver_id = auth.uid()
+      )
+    );
+
+
+  -- ─── EXTEND USERS TABLE — Driver verification document URLs ──────────────────
+  ALTER TABLE public.users
+    ADD COLUMN IF NOT EXISTS license_front_url  TEXT,
+    ADD COLUMN IF NOT EXISTS license_back_url   TEXT,
+    ADD COLUMN IF NOT EXISTS vehicle_reg_url    TEXT,
+    ADD COLUMN IF NOT EXISTS docs_submitted_at  TIMESTAMPTZ;
+
+
+  -- ─── NOTIFICATIONS TABLE ──────────────────────────────────────────────────────
+  CREATE TABLE IF NOT EXISTS public.notifications (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    title      TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    metadata   JSONB DEFAULT '{}',
+    read       BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+  CREATE POLICY "Users can read own notifications"
+    ON public.notifications FOR SELECT
+    USING (auth.uid() = user_id);
+
+  CREATE POLICY "Authenticated users can create notifications"
+    ON public.notifications FOR INSERT
+    WITH CHECK (auth.uid() IS NOT NULL);
+
+  CREATE POLICY "Users can update own notifications"
+    ON public.notifications FOR UPDATE
+    USING (auth.uid() = user_id);

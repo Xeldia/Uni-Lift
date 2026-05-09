@@ -1,0 +1,157 @@
+/* ─── Logo Animation Keyframes ─────────────────────────────────────────────── */
+
+/**
+ * Glow → Unglow
+ * Used on the login-page header logo.
+ * The logo brightens to a white glow, then the glow fades away, leaving
+ * a clean white-filtered version of the PNG.
+ * Duration: 2.4s   Delay: 0.3s
+ */
+@keyframes logoGlowFade {
+  0%   { filter: brightness(0) invert(1) drop-shadow(0 0 0px rgba(255,255,255,0)); }
+  25%  { filter: brightness(0) invert(1) drop-shadow(0 0 14px rgba(255,255,255,0.9)) drop-shadow(0 0 28px rgba(255,255,255,0.5)); }
+  60%  { filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.55)); }
+  100% { filter: brightness(0) invert(1) drop-shadow(0 0 0px rgba(255,255,255,0)); }
+}
+
+.logo-header-glow {
+  /* Makes a dark PNG fully white, then animates the glow on/off */
+  filter: brightness(0) invert(1);
+  animation: logoGlowFade 2.4s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+}
+
+/**
+ * Phase 1 — Pop In
+ * The icon scales up from nothing into view.
+ * Duration:  1.1s  (slowed down from 0.8s)
+ * Timing:    cubic-bezier(0.34, 1.56, 0.64, 1)  ← springy overshoot
+ * Delay:     0s
+ */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/**
+ * Phase 3 — Reveal Text  (Fade + Slide)
+ * "ni-Lift" fades in and slides from the right simultaneously.
+ * Duration:  1.1s  (slowed from 0.85s)
+ * Timing:    cubic-bezier(0.22, 1, 0.36, 1)  ← smooth ease-out
+ * Delay:     1.9s  (slowed from 1.4s)
+ *
+ * ┌─ Adjust animation timing ──────────────────────────────────────────────┐
+ * │  To speed up the hold before text appears → lower animation-delay      │
+ * │  To slow down the text slide-in          → raise animation-duration    │
+ * │  To make text slide more distance        → raise the `from` translateX │
+ * └────────────────────────────────────────────────────────────────────────┘
+ */
+@keyframes revealText {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+    max-width: 0;
+    margin-left: 0;
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    max-width: 280px;
+    /* Negative margin closes the gap caused by internal PNG whitespace
+       so the "U" glyph and "ni-Lift" read as one connected word */
+    margin-left: -3px;
+  }
+}
+
+/* ─── Component Styles ──────────────────────────────────────────────────────── */
+
+.logo-anim-wrapper {
+  display: inline-flex;
+  align-items: center;
+  /* No flex gap — spacing is controlled via margin-left on the text */
+}
+
+.logo-anim-icon {
+  flex-shrink: 0;
+
+  /* Phase 1: pop in — slowed to 1.1s */
+  opacity: 0;
+  animation: popIn 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.logo-anim-img {
+  /* Ensure the PNG keeps its aspect ratio */
+  object-fit: contain;
+  /* Clamp the icon width so the glyph sits flush with the text */
+  width: auto;
+  display: block;
+  /* Invert dark PNG to white for dark backgrounds */
+  filter: brightness(0) invert(1);
+}
+
+.logo-anim-text {
+  /* Phase 3: fade + slide from right */
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  opacity: 0;
+  margin-left: 7;
+
+  /* Slowed down: 1.1s slide, 1.9s hold before reveal */
+  animation: revealText 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 1.9s;
+}
+
+/* ─── Input Background Override ───────────────────────────────────────── */
+/*
+  Chrome’s dark-mode UA stylesheet forces a grey background onto <input>
+  elements, overriding Tailwind’s bg-transparent. The only reliable
+  way to beat the UA stylesheet is !important on a named class.
+*/
+.input-bare {
+  background-color: transparent !important;
+  background:       transparent !important;
+  -webkit-appearance: none !important;
+  appearance:         none  !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  /*
+    Force the browser to treat this input as a "light" control.
+    Without this, Chrome's dark-mode UA stylesheet paints its own
+    grey inset background on <input> elements even when bg-transparent
+    is set — color-scheme:light removes that UA background entirely.
+  */
+  color-scheme: light;
+}
+
+/* ─── Browser Autofill Override ───────────────────────────────────────── */
+/*
+  Autofill paints a solid coloured box that cannot be removed with
+  background-color. The only escape is a large opaque inset box-shadow
+  that covers the browser colour completely.
+*/
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  /* Match the rendered card bg-black/70 (≈ rgb(8 8 8)) to hide autofill tint */
+  -webkit-box-shadow: 0 0 0 1000px rgb(8, 8, 8) inset !important;
+  box-shadow:         0 0 0 1000px rgb(8, 8, 8) inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Kill browser focus ring on the same inputs — our border handles it */
+.input-bare:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

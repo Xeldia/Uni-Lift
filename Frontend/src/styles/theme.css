@@ -179,3 +179,42 @@
     line-height: 1.5;
   }
 }
+
+/* ── Dark-mode overrides for hardcoded Tailwind utilities ────────────────────
+   Applied when next-themes sets <html class="dark">.
+   Written outside @layer so they outrank Tailwind's utility layer.          */
+
+/* Structural backgrounds */
+.dark .bg-white                  { background-color: #1f2937 !important; }
+.dark .bg-\[#fafafa\]            { background-color: #1a2234 !important; }
+.dark .bg-\[#f8fafc\]            { background-color: #1a2234 !important; }
+.dark .bg-\[#f3f4f6\]            { background-color: #111827 !important; }
+.dark .bg-\[#fff7ed\]            { background-color: #1c1400 !important; }
+
+/* Black → dark-gray (white text on it stays readable) */
+.dark .bg-black                  { background-color: #374151 !important; }
+.dark .bg-\[#0a0a0a\]            { background-color: #374151 !important; }
+
+/* Light-gray section backgrounds */
+.dark .bg-\[#fef2f2\]            { background-color: #1a0a0a !important; }
+
+/* Text */
+.dark .text-black                { color: #f9fafb !important; }
+.dark .text-\[#0a0a0a\]          { color: #f9fafb !important; }
+.dark .text-\[#6a7282\]          { color: #9ca3af !important; }
+.dark .text-\[#99a1af\]          { color: #6b7280 !important; }
+.dark .text-\[#b45309\]          { color: #fbbf24 !important; }
+
+/* Borders */
+.dark .border-black              { border-color: #4b5563 !important; }
+.dark .border-\[\#e5e7eb\]       { border-color: #374151 !important; }
+.dark .border-\[\#f3f4f6\]       { border-color: #1f2937 !important; }
+.dark .border-\[\#d1d5dc\]       { border-color: #4b5563 !important; }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover   { background-color: #374151 !important; }
+.dark .hover\:bg-gray-100:hover  { background-color: #374151 !important; }
+.dark .hover\:bg-gray-900:hover  { background-color: #111827 !important; }
+
+/* Navigation border-b */
+.dark nav.border-b               { border-color: #374151 !important; }

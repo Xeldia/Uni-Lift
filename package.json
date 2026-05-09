@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run dev:all",
+    "dev:backend": "npm run dev --prefix Backend",
+    "dev:frontend": "npm run dev --prefix Frontend",
+    "dev:all": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\" -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\"",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
@@ -13,10 +16,13 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.17.19",
+    "@types/leaflet": "^1.9.21",
     "clsx": "^2.1.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.309.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1",
     "tailwind-merge": "^2.2.0",
     "wouter": "^3.0.0",
     "zustand": "^4.4.7"
