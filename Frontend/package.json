@@ -64,7 +64,8 @@
     "three": "^0.134.0",
     "tw-animate-css": "^1.2.5",
     "vanta": "^0.5.24",
-    "vaul": "^1.1.2"
+    "vaul": "^1.1.2",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.3",
