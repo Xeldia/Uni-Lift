@@ -130,7 +130,7 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
           <div className="flex items-center border border-black h-[23px]">
             <span className="px-2 font-mono text-[9px] text-[#666] tracking-[0.45px]">MODE:</span>
             <button
-              onClick={onModeToggle}
+              onClick={() => onModeToggle?.("RIDER")}
               className={`h-full px-3 font-mono text-[9px] tracking-[0.45px] transition-colors ${
                 mode === "RIDER" ? "bg-black text-white" : "bg-white text-black"
               }`}
@@ -138,7 +138,7 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
               RIDER
             </button>
             <button
-              onClick={onModeToggle}
+              onClick={() => onModeToggle?.("DRIVER")}
               className={`h-full px-3 font-mono text-[9px] tracking-[0.45px] flex items-center gap-1 transition-colors ${
                 mode === "DRIVER" ? "bg-black text-white" : "bg-white text-black"
               }`}

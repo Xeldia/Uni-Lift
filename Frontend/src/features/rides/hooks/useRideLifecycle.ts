@@ -227,7 +227,8 @@ const initialDriver: DriverState = {
 // ════════════════════════════════════════════════════════════════════════════
 
 // Read persisted mode once at module load
-const _savedMode = (localStorage.getItem("uni_lift_app_mode") as "RIDER" | "DRIVER") ?? "RIDER";
+const rawSavedMode = localStorage.getItem("uni_lift_app_mode");
+const _savedMode: AppMode = rawSavedMode === "DRIVER" ? "DRIVER" : "RIDER";
 
 // Restore in-progress rider state so a refresh doesn't kill the ride
 const _savedRiderPhase = (localStorage.getItem("uni_lift_rider_phase") as import("./useRideLifecycle").RiderPhase | null);
@@ -263,12 +264,13 @@ export const useRideLifecycle = create<LifecycleState>()((set, get) => ({
 
   // ── Shared ───────────────────────────────────────────────────────────────
   setAppMode: (mode) => {
+    const nextMode: AppMode = mode === "DRIVER" ? "DRIVER" : "RIDER";
     // Persist so the chosen role survives a page refresh
-    localStorage.setItem("uni_lift_app_mode", mode);
+    localStorage.setItem("uni_lift_app_mode", nextMode);
     set({
-      appMode: mode,
-      rider: { ...initialRider, phase: mode === "RIDER" ? "BOOKING" : "ROLE_SELECT" },
-      driver: { ...initialDriver, phase: mode === "DRIVER" ? "WAITING_FOR_RIDER" : "ROLE_SELECT" },
+      appMode: nextMode,
+      rider: { ...initialRider, phase: nextMode === "RIDER" ? "BOOKING" : "ROLE_SELECT" },
+      driver: { ...initialDriver, phase: nextMode === "DRIVER" ? "WAITING_FOR_RIDER" : "ROLE_SELECT" },
     });
   },
 
