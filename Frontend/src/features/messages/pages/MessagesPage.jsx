@@ -272,7 +272,7 @@ export function MessagesPage() {
       selfUserId === activeConv.riderId
     )
   );
-  const isCurrentUserDriver = Boolean(activeConv && selfUserId && selfUserId === activeConv.driverId);
+  /** Incoming offers use offerType "counter" for the recipient (whether they are rider or driver in the row). */
   const latestPendingIncomingOffer = activeConv?.messages
     .filter((m) => m.offerType === "counter" && (m.offerStatus === "PENDING" || m.offerStatus == null))
     .at(-1);
@@ -504,7 +504,7 @@ export function MessagesPage() {
                 key={msg.id}
                 msg={msg}
                 canApprove={
-                  isCurrentUserDriver &&
+                  isConversationParticipant &&
                   activeThread.status === "NEGOTIATING" &&
                   msg.id === latestPendingIncomingOffer?.id
                 }
