@@ -1,10 +1,14 @@
 services:
-  # ── Backend: Docker ───────────────────────────────────────────────────────────
   - type: web
-    name: unilift-backend
+    name: unilift
     runtime: docker
-    rootDir: Backend
     dockerfilePath: ./Dockerfile
+    dockerBuildArgs:
+      - key: VITE_SUPABASE_URL
+        fromEnvVar: VITE_SUPABASE_URL
+      - key: VITE_SUPABASE_ANON_KEY
+        fromEnvVar: VITE_SUPABASE_ANON_KEY
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,26 +16,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: CORS_ORIGIN
-        sync: false
-
-  # ── Frontend: Docker (Vite build + serve) ─────────────────────────────────────
-  - type: web
-    name: unilift-frontend
-    runtime: docker
-    rootDir: Frontend
-    dockerfilePath: ./Dockerfile
-    dockerBuildArgs:
-      - key: VITE_SUPABASE_URL
-        value: ""
-      - key: VITE_SUPABASE_ANON_KEY
-        value: ""
-      - key: VITE_API_BASE_URL
-        value: ""
-    envVars:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
-        sync: false
-      - key: VITE_API_BASE_URL
         sync: false
