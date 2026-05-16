@@ -34,13 +34,25 @@ export function useRideDetailsPopup() {
     unsubRef.current = unsub as Unsub;
   }, [ride, open]);
 
+  const openWithRide = useCallback((rideData: any) => {
+    if (!rideData) return;
+
+    if (typeof unsubRef.current === "function") {
+      try { (unsubRef.current as (() => void))(); } catch (e) { /* ignore */ }
+    }
+
+    unsubRef.current = null;
+    setRide(rideData);
+    setOpen(true);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (typeof unsubRef.current === "function") (unsubRef.current as (() => void))();
     };
   }, []);
 
-  return { open, ride, openFor, close };
+  return { open, ride, openFor, openWithRide, close };
 }
 
 export default useRideDetailsPopup;

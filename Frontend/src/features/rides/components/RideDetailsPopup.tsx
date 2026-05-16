@@ -5,8 +5,12 @@ import { CampusMap } from "../../../shared/components/map/CampusMap";
 export function RideDetailsPopup({ open, onClose, ride }) {
   if (!open) return null;
 
-  const pickup = ride ? { lat: ride.pickup_lat, lng: ride.pickup_lng } : null;
-  const destination = ride ? { lat: ride.dropoff_lat, lng: ride.dropoff_lng } : null;
+  const pickup = ride && ride.pickup_lat != null && ride.pickup_lng != null
+    ? { lat: ride.pickup_lat, lng: ride.pickup_lng }
+    : null;
+  const destination = ride && ride.dropoff_lat != null && ride.dropoff_lng != null
+    ? { lat: ride.dropoff_lat, lng: ride.dropoff_lng }
+    : null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">

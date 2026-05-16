@@ -182,7 +182,7 @@ export function HomePage() {
     rider_startSearching,
     rider_startTrip,
   } = useRideLifecycle();
-  const { open: ridePopupOpen, ride: ridePopupRide, openFor: openRidePopup, close: closeRidePopup } = useRideDetailsPopup();
+  const { open: ridePopupOpen, ride: ridePopupRide, openFor: openRidePopup, openWithRide: openRidePopupWithRide, close: closeRidePopup } = useRideDetailsPopup();
   const isDriver = appMode === "DRIVER";
   const [isPostingRide, setIsPostingRide] = useState(false);
 
@@ -273,6 +273,11 @@ export function HomePage() {
       setInspectRide(null);
     }
   }, [rider.phase]);
+
+  useEffect(() => {
+    if (!rider.agreedRide) return;
+    openRidePopupWithRide(rider.agreedRide);
+  }, [openRidePopupWithRide, rider.agreedRide]);
 
   const handleFindDriver = async () => {
     if (isPostingRide) return;

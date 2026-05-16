@@ -748,7 +748,22 @@ export const useChat = create<ChatState>()((set, get) => ({
       etaMinutes: 3,
       distanceKm: parseFloat(conv.distance) || 0.5,
     };
-    useRideLifecycle.getState().onChatAgreed(matchedDriver);
+    useRideLifecycle.getState().onChatAgreed(matchedDriver, {
+      id: conv.id,
+      pickup: conv.pickup,
+      dropoff: conv.dropoff,
+      fare: amount,
+      pickup_lat: null,
+      pickup_lng: null,
+      dropoff_lat: null,
+      dropoff_lng: null,
+      driver_name: conv.driverName,
+      driver_initials: conv.driverInitials,
+      driver_vehicle: conv.vehicle,
+      driver_plate: conv.plate,
+      driver_rating: conv.rating,
+      notes: `Agreed in chat for ₱${amount.toFixed(2)}`,
+    });
     // ─────────────────────────────────────────────────────────────────────────
 
     // ── TODO: INSERT INTO supabase rides table ────────────────────────────────

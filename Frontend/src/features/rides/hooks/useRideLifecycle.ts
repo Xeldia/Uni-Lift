@@ -77,6 +77,23 @@ export interface TripSummary {
   distanceKm: number;
 }
 
+export interface AgreedRideSnapshot {
+  id: string;
+  pickup: string;
+  dropoff: string;
+  fare: number;
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  dropoff_lat?: number | null;
+  dropoff_lng?: number | null;
+  driver_name: string;
+  driver_initials: string;
+  driver_vehicle: string;
+  driver_plate: string;
+  driver_rating: number;
+  notes?: string | null;
+}
+
 // ── Driver earnings summary (shown in TRIP_SUMMARY phase) ───────────────────
 export interface DriverEarnings {
   fareAmount: number;
@@ -98,6 +115,7 @@ export interface RiderState {
   matchedDriver: MatchedDriver | null;
   etaSeconds: number;        // live countdown (seconds remaining)
   proposedFare: number | null; // set during FARE_NEGOTIATION phase
+  agreedRide: AgreedRideSnapshot | null;
 
   // TRIP_IN_PROGRESS
   fareAmount: number;
@@ -173,7 +191,7 @@ interface LifecycleState {
   // ── Chat Bridge ─────────────────────────────────────────────────────────
   // Called automatically by useChat.confirmOffer when a conversation hits AGREED.
   // Rider → DRIVER_FOUND, Driver → EN_ROUTE_TO_PICKUP.
-  onChatAgreed: (driver: MatchedDriver) => void;
+  onChatAgreed: (driver: MatchedDriver, ride?: AgreedRideSnapshot) => void;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -201,6 +219,7 @@ const initialRider: RiderState = {
   matchedDriver: null,
   etaSeconds: 0,
   proposedFare: null,
+  agreedRide: null,
   fareAmount: 0,
   tripSummary: null,
   ratingStars: 0,
@@ -254,9 +273,13 @@ export const useRideLifecycle = create<LifecycleState>()((set, get) => ({
   rider: {
     ...initialRider,
     // Restore in-progress state if page was refreshed mid-ride
-    phase: (_savedRiderPhase && _savedMode === "RIDER") ? _savedRiderPhase : _savedMode === "RIDER" ? "BOOKING" : "ROLE_SELECT",
+    phase: (() => {
+      if (_savedRiderPhase && _savedMode === "RIDER") return _savedRiderPhase;
+      return _savedMode === "RIDER" ? "BOOKING" : "ROLE_SELECT";
+    })(),
     activeRideId: _savedRideId || null,
     matchedDriver: _savedDriver ?? null,
+    agreedRide: null,
   },
   // If restoring as DRIVER, go straight to WAITING_FOR_RIDER so the feed is visible
   driver: { ...initialDriver, phase: _savedMode === "DRIVER" ? "WAITING_FOR_RIDER" : "ROLE_SELECT" },
@@ -359,6 +382,7 @@ export const useRideLifecycle = create<LifecycleState>()((set, get) => ({
         tripSummary: summary,
         ratingStars: 0,
         ratingTags: [],
+        agreedRide: null,
       },
     }));
   },
@@ -371,6 +395,7 @@ export const useRideLifecycle = create<LifecycleState>()((set, get) => ({
         phase: "BOOKING",
         ratingStars: stars,
         ratingTags: tags,
+        agreedRide: null,
       },
     }));
   },
@@ -382,6 +407,7 @@ export const useRideLifecycle = create<LifecycleState>()((set, get) => ({
         ...initialRider,
         phase: "BOOKING",
         pickup: s.rider.pickup,    // preserve pickup location
+        agreedRide: null,
       },
     }));
   },
@@ -529,20 +555,43 @@ export const useRideLifecycle = create<LifecycleState>()((set, get) => ({
   // ── Chat Bridge ────────────────────────────────────────────────────────────
   // Automatically called when useChat.confirmOffer() resolves to AGREED.
   // Bridges the negotiation phase into the structured ride lifecycle.
-  onChatAgreed: (driver) => {
+  onChatAgreed: (driver: MatchedDriver, ride: AgreedRideSnapshot | undefined) => {
     const { appMode } = get();
 
     if (appMode === "RIDER") {
       // Rider side: jump straight to DRIVER_FOUND with the agreed driver
-      set((s) => ({
-        rider: {
-          ...s.rider,
-          phase: "DRIVER_FOUND",
-          matchedDriver: driver,
-          etaSeconds: driver.etaMinutes * 60,
-          fareAmount: driver.etaMinutes, // will be overridden by actual agreed price
-        },
-      }));
+      set((s) => {
+        const agreedRide: AgreedRideSnapshot = ride ?? {
+          id: s.rider.activeRideId ?? `local-${Date.now()}`,
+          pickup: s.rider.pickup,
+          dropoff: s.rider.dropoff,
+          fare: s.rider.fareAmount,
+          pickup_lat: null,
+          pickup_lng: null,
+          dropoff_lat: null,
+          dropoff_lng: null,
+          driver_name: driver.name,
+          driver_initials: driver.initials,
+          driver_vehicle: driver.vehicle,
+          driver_plate: driver.plate,
+          driver_rating: driver.rating,
+          notes: null,
+        };
+
+        return {
+          rider: {
+            ...s.rider,
+            phase: "DRIVER_FOUND",
+            matchedDriver: driver,
+            etaSeconds: driver.etaMinutes * 60,
+            fareAmount: agreedRide.fare,
+            pickup: agreedRide.pickup,
+            dropoff: agreedRide.dropoff,
+            activeRideId: agreedRide.id,
+            agreedRide,
+          },
+        };
+      });
     }
 
     if (appMode === "DRIVER") {
