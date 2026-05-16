@@ -349,7 +349,30 @@ export const useChat = create<ChatState>()((set, get) => ({
       return;
     }
 
-    const conversationRows = await getConversations(userId);
+    let conversationRows = await getConversations(userId);
+    // If we received no rows, perform a lightweight check for RLS/permission errors
+    // and fall back to the local snapshot if Supabase denies access.
+    if ((!conversationRows || conversationRows.length === 0)) {
+      try {
+        const test = await supabase.from("conversations").select("id").limit(1);
+        if (test.error) {
+          const msg = String(test.error.message ?? "").toLowerCase();
+          if (msg.includes("row-level security") || msg.includes("permission") || (test.error as any).status === 403) {
+            messagingBackendAvailable = false;
+            const localSnapshot = readLocalChatSnapshot();
+            const conversations = localSnapshot.conversations.map(cloneConversation);
+            set({
+              conversations,
+              activeConvId: conversations.find((conversation) => conversation.id === get().activeConvId)?.id ?? conversations[0]?.id ?? null,
+              isLoading: false,
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore and continue — if test fails, fall back to empty handling below
+      }
+    }
     const participantIds = Array.from(new Set(conversationRows.flatMap((row) => [row.driver_id, row.rider_id])));
     const { data: profiles } = await supabase
       .from("users")
