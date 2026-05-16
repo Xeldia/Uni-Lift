@@ -21,9 +21,10 @@ export function RideDetailsPopup({ open, onClose, ride }) {
         </div>
 
         <div className="h-[320px]">
+          {/* CampusMap is a JS component without explicit TS types; cast to any to satisfy TS */}
           <CampusMap
-            pickup={pickup}
-            destination={destination}
+            pickup={pickup as any}
+            destination={destination as any}
             drivers={[]}
             tripInProgress={false}
           />
