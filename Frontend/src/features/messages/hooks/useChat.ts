@@ -903,28 +903,30 @@ export const useChat = create<ChatState>()((set, get) => ({
     }
 
     const conversationRows = await getConversations(currentUserId);
-    if (!conversationRows.length) {
-      useChat.setState({ conversations: [], activeConvId: null, isLoading: false });
-      return;
+    let conversations: Conversation[] = [];
+    let profileError: { message?: string } | null = null;
+
+    if (conversationRows.length > 0) {
+      const participantIds = Array.from(new Set(conversationRows.flatMap((row) => [row.driver_id, row.rider_id])));
+      const { data: profiles, error } = await supabase
+        .from("users")
+        .select("id, full_name, vehicle, vehicle_type, driver_plate_number, rating")
+        .in("id", participantIds);
+
+      profileError = error;
+
+      const userMap = new Map(
+        (profiles ?? []).map((profile: any) => [profile.id, profile as { full_name?: string | null; vehicle?: string | null; vehicle_type?: string | null; driver_plate_number?: string | null; rating?: number | null }])
+      );
+
+      conversations = await Promise.all(
+        conversationRows.map(async (row) => {
+          const messageRows = await getMessages(row.id);
+          const messages = messageRows.map((messageRow) => mapMessageRowToChatMessage(messageRow, row, currentUserId));
+          return mapConversationRowToConversation(row, userMap, currentUserId, messages);
+        })
+      );
     }
-
-    const participantIds = Array.from(new Set(conversationRows.flatMap((row) => [row.driver_id, row.rider_id])));
-    const { data: profiles, error: profileError } = await supabase
-      .from("users")
-      .select("id, full_name, vehicle, vehicle_type, driver_plate_number, rating")
-      .in("id", participantIds);
-
-    const userMap = new Map(
-      (profiles ?? []).map((profile: any) => [profile.id, profile as { full_name?: string | null; vehicle?: string | null; vehicle_type?: string | null; driver_plate_number?: string | null; rating?: number | null }])
-    );
-
-    const conversations = await Promise.all(
-      conversationRows.map(async (row) => {
-        const messageRows = await getMessages(row.id);
-        const messages = messageRows.map((messageRow) => mapMessageRowToChatMessage(messageRow, row, currentUserId));
-        return mapConversationRowToConversation(row, userMap, currentUserId, messages);
-      })
-    );
 
     useChat.setState({
       conversations,
