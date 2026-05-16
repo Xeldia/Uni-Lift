@@ -535,7 +535,7 @@ export function MessagesPage() {
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               placeholder={isRequestLocked ? "Request limit reached" : activeThread.status === "REQUESTED" ? "Send request message..." : "Type a message..."}
-              disabled={Boolean(isCooldownActive) || !activeConvId}
+              disabled={Boolean(isCooldownActive)}
               className="flex-1 h-full px-4 font-mono text-[10px] text-black bg-transparent outline-none placeholder:text-[#d1d5dc]"
             />
             <button
