@@ -8,6 +8,8 @@ import { useGeolocation } from "../../../shared/components/map/useGeolocation";
 import { useRideLifecycle, RIDE_TYPE_PRICES } from "../../rides/hooks/useRideLifecycle";
 import { RiderMatchingOverlay } from "../../rides/components/RiderMatchingOverlay";
 import { DriverRequestFeed } from "../../rides/components/DriverRequestFeed";
+import RideDetailsPopup from "../../rides/components/RideDetailsPopup";
+import { useRideDetailsPopup } from "../../rides/hooks/useRideDetailsPopup";
 import {
   cancelExistingSearchingRides,
   getSession,
@@ -180,6 +182,7 @@ export function HomePage() {
     rider_startSearching,
     rider_startTrip,
   } = useRideLifecycle();
+  const { open: ridePopupOpen, ride: ridePopupRide, openFor: openRidePopup, close: closeRidePopup } = useRideDetailsPopup();
   const isDriver = appMode === "DRIVER";
   const [isPostingRide, setIsPostingRide] = useState(false);
 
@@ -330,7 +333,7 @@ export function HomePage() {
 
   useEffect(() => {
     if (!rider.activeRideId) return undefined;
-
+    // ensure popup follows ride updates when status changes
     const unsubscribe = subscribeToRide(rider.activeRideId, (ride) => {
       if (!ride) return;
 
@@ -350,7 +353,14 @@ export function HomePage() {
           // Legacy path: direct accept without fare negotiation
           rider_onDriverFound(buildDriverSnapshot(ride.driver_id, onlineDrivers, fallbackDrivers));
         }
+        // Open ride details popup for rider when accepted
+        try { openRidePopup(ride.id); } catch (e) { /* ignore */ }
         // If phase === "FARE_NEGOTIATION", acceptFare() already transitioned locally
+      }
+
+      if (ride.status === "FARE_PROPOSED" && ride.driver_id && ride.fare != null) {
+        // also open popup so rider can see the proposed fare and map
+        try { openRidePopup(ride.id); } catch (e) { /* ignore */ }
       }
 
       if (ride.status === "IN_TRANSIT" && lifecycle.rider.phase === "DRIVER_FOUND") {
@@ -369,6 +379,9 @@ export function HomePage() {
 
     return unsubscribe;
   }, [onlineDrivers, rider.activeRideId, rider_cancelSearch, rider_completeTrip, rider_onDriverFound, rider_onFareProposed, rider_setActiveRideId, rider_startTrip]);
+
+  // render ride details popup
+  
 
   const fallbackDrivers = new Map(
     ACTIVE_DRIVERS.map((driver) => [driver.name.toLowerCase(), driver])
@@ -668,6 +681,8 @@ export function HomePage() {
           </div>
         </aside>
       </div>
+
+      <RideDetailsPopup open={ridePopupOpen} onClose={closeRidePopup} ride={ridePopupRide} />
     </div>
   );
 }
