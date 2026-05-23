@@ -460,7 +460,7 @@ export function VerificationsPage() {
                         <div>
                           <p className="font-mono text-[7px] text-[#99a1af] tracking-[1px]">SUBMITTED AT</p>
                           <p className="font-mono text-[10px] text-[#6a7282]">
-                            {new Date(selectedUser.created_at).toLocaleString()}
+                            {new Date(selectedUser.docs_submitted_at ?? selectedUser.updated_at ?? selectedUser.created_at).toLocaleString()}
                           </p>
                         </div>
                       </div>
