@@ -118,7 +118,6 @@ export const usersRepository = {
         role: "rider",
         driver_verification_status: "REVOKED",
         driver_rejection_reason: reason || "Driver permission revoked by admin",
-        driver_status: "OFFLINE",
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId)
@@ -219,7 +218,6 @@ export const usersRepository = {
         driver_verification_status: "REJECTED",
         driver_rejection_reason: reason || "Driver verification requirements not met.",
         driver_verified_at: null,
-        driver_status: "OFFLINE",
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId)

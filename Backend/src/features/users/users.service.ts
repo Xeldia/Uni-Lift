@@ -258,7 +258,6 @@ export const usersService = {
     if (!driverCapableRoles.includes(normalized)) {
       payload.driver_verification_status = "REVOKED";
       payload.driver_rejection_reason = "Driver access removed by admin role update.";
-      payload.driver_status = "OFFLINE";
     }
 
     // If admin explicitly grants any driver-capable role, mark verification approved.
