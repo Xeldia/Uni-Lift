@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { AdminNavigation } from "../components/AdminNavigation";
-import { subscribeToSOS, resolveSOS, assignSOS } from "../../../shared/lib/supabase";
+import { subscribeToSOS, resolveSOS, assignSOS, callEmergencyForSOS } from "../../../shared/lib/supabase";
 
 // ─── Alert Type Badge ─────────────────────────────────────────────────────────
 function AlertTypeBadge({ type }) {
@@ -97,6 +97,9 @@ export function SOSAlertsPage() {
   const [resolving, setResolving] = useState(false);
   const [assigneeDraft, setAssigneeDraft] = useState("");
   const [assigning, setAssigning] = useState(false);
+  // Emergency call simulation: "IDLE" | "CALLING" | "DISPATCHED"
+  const [callState, setCallState] = useState("IDLE");
+  const callTimerRef = useRef(null);
 
   // ── Subscribe to all SOS alerts from Supabase ─────────────────────────────
   useEffect(() => {
@@ -164,7 +167,20 @@ export function SOSAlertsPage() {
 
   useEffect(() => {
     setAssigneeDraft(selectedAlert?.assigned_to ?? "");
+    // Reset call simulation whenever a new alert is selected
+    setCallState("IDLE");
+    if (callTimerRef.current) clearTimeout(callTimerRef.current);
   }, [selectedAlert?.id]);
+
+  const handleCallEmergency = async (alertId) => {
+    if (callState !== "IDLE") return;
+    setCallState("CALLING");
+    // Simulate a ~3s dispatch sequence then mark dispatched
+    callTimerRef.current = setTimeout(async () => {
+      setCallState("DISPATCHED");
+      await callEmergencyForSOS(alertId);
+    }, 3000);
+  };
 
   const exportCsv = () => {
     const headers = ["id", "status", "type", "user_id", "ride_id", "location", "lat", "lng", "assigned_to", "triggered_at", "resolved_at", "resolved_by", "resolution_note"];
@@ -377,41 +393,83 @@ export function SOSAlertsPage() {
                     <p className="font-mono text-[10px] text-[#166534]">{selectedAlert.resolution_note}</p>
                   </div>
                 ) : (
-                  <div className="p-4 border-t border-[#e5e7eb]">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex-1">
-                        <p className="font-mono text-[7px] text-[#99a1af] tracking-[1.5px] mb-1">ASSIGNED TO</p>
-                        <input
-                          type="text"
-                          value={assigneeDraft}
-                          onChange={(e) => setAssigneeDraft(e.target.value)}
-                          placeholder="Responder name..."
-                          className="w-full h-[32px] border border-[#d1d5dc] px-2 font-mono text-[9px] text-black outline-none focus:border-black placeholder:text-[#d1d5dc]"
-                        />
-                      </div>
-                      <button
-                        onClick={() => handleAssign(selectedAlert.id)}
-                        disabled={assigning}
-                        className="h-[32px] px-3 border border-black font-mono text-[8px] text-black tracking-[0.5px] hover:bg-black hover:text-white transition-colors disabled:opacity-50 mt-[14px]"
-                      >
-                        {assigning ? "..." : "ASSIGN"}
-                      </button>
+                  <div className="border-t border-[#e5e7eb]">
+                    {/* ── CALL EMERGENCY STAFF ── */}
+                    <div className="p-4 border-b border-[#e5e7eb]">
+                      {callState === "IDLE" && (
+                        <button
+                          id="btn-call-emergency"
+                          onClick={() => handleCallEmergency(selectedAlert.id)}
+                          className="w-full h-[52px] bg-[#ef4444] flex items-center justify-center gap-3 hover:bg-red-600 active:scale-95 transition-all shadow-md shadow-red-200"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M6.5 2H3.5C2.95 2 2.5 2.45 2.5 3C2.5 10.45 8.55 16.5 16 16.5C16.55 16.5 17 16.05 17 15.5V12.5L13.5 11L12.07 12.43C10.61 11.72 9.28 10.39 8.57 8.93L10 7.5L8.5 4H6.5Z" fill="white" />
+                          </svg>
+                          <span className="font-mono text-[13px] text-white tracking-[1px] font-bold">CALL EMERGENCY STAFF</span>
+                        </button>
+                      )}
+
+                      {callState === "CALLING" && (
+                        <div className="w-full h-[52px] bg-[#dc2626] flex items-center justify-center gap-3 relative overflow-hidden">
+                          <span className="absolute inset-0 bg-white/10 animate-ping" />
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="animate-bounce">
+                            <path d="M6.5 2H3.5C2.95 2 2.5 2.45 2.5 3C2.5 10.45 8.55 16.5 16 16.5C16.55 16.5 17 16.05 17 15.5V12.5L13.5 11L12.07 12.43C10.61 11.72 9.28 10.39 8.57 8.93L10 7.5L8.5 4H6.5Z" fill="white" />
+                          </svg>
+                          <span className="font-mono text-[13px] text-white tracking-[1px] font-bold">CALLING<span className="animate-pulse">...</span></span>
+                        </div>
+                      )}
+
+                      {callState === "DISPATCHED" && (
+                        <div className="w-full h-[52px] bg-[#10b981] flex items-center justify-center gap-3">
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M3 9L7 13L15 5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <span className="font-mono text-[13px] text-white tracking-[1px] font-bold">EMERGENCY DISPATCHED</span>
+                        </div>
+                      )}
+
+                      <p className="font-mono text-[7px] text-[#99a1af] text-center mt-2 tracking-[0.5px]">
+                        {callState === "DISPATCHED" ? "Emergency services have been contacted" : "Contacts on-call emergency responders"}
+                      </p>
                     </div>
-                    <p className="font-mono text-[7px] text-[#99a1af] tracking-[1.5px] mb-2">RESOLUTION NOTE</p>
-                    <textarea
-                      value={resolutionNote}
-                      onChange={(e) => setResolutionNote(e.target.value)}
-                      placeholder="Enter resolution details..."
-                      className="w-full h-[60px] border border-[#d1d5dc] p-2 font-mono text-[9px] text-black resize-none outline-none focus:border-black placeholder:text-[#d1d5dc]"
-                    />
-                    <div className="flex items-center justify-end mt-3">
-                      <button
-                        onClick={() => handleResolve(selectedAlert.id)}
-                        disabled={resolving}
-                        className="h-[36px] px-6 bg-[#10b981] font-mono text-[9px] text-white tracking-[0.5px] hover:bg-green-600 transition-colors disabled:opacity-50"
-                      >
-                        {resolving ? "RESOLVING..." : "MARK RESOLVED"}
-                      </button>
+
+                    {/* ── ASSIGN + RESOLVE ── */}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex-1">
+                          <p className="font-mono text-[7px] text-[#99a1af] tracking-[1.5px] mb-1">ASSIGNED TO</p>
+                          <input
+                            type="text"
+                            value={assigneeDraft}
+                            onChange={(e) => setAssigneeDraft(e.target.value)}
+                            placeholder="Responder name..."
+                            className="w-full h-[32px] border border-[#d1d5dc] px-2 font-mono text-[9px] text-black outline-none focus:border-black placeholder:text-[#d1d5dc]"
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleAssign(selectedAlert.id)}
+                          disabled={assigning}
+                          className="h-[32px] px-3 border border-black font-mono text-[8px] text-black tracking-[0.5px] hover:bg-black hover:text-white transition-colors disabled:opacity-50 mt-[14px]"
+                        >
+                          {assigning ? "..." : "ASSIGN"}
+                        </button>
+                      </div>
+                      <p className="font-mono text-[7px] text-[#99a1af] tracking-[1.5px] mb-2">RESOLUTION NOTE</p>
+                      <textarea
+                        value={resolutionNote}
+                        onChange={(e) => setResolutionNote(e.target.value)}
+                        placeholder="Enter resolution details..."
+                        className="w-full h-[60px] border border-[#d1d5dc] p-2 font-mono text-[9px] text-black resize-none outline-none focus:border-black placeholder:text-[#d1d5dc]"
+                      />
+                      <div className="flex items-center justify-end mt-3">
+                        <button
+                          onClick={() => handleResolve(selectedAlert.id)}
+                          disabled={resolving}
+                          className="h-[36px] px-6 bg-[#10b981] font-mono text-[9px] text-white tracking-[0.5px] hover:bg-green-600 transition-colors disabled:opacity-50"
+                        >
+                          {resolving ? "RESOLVING..." : "✓ MARK RESOLVED"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

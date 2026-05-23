@@ -293,6 +293,8 @@ export function DriverRequestFeed({
   const [ratingSaving, setRatingSaving] = useState(false);
   const [ratingSaved, setRatingSaved] = useState(false);
   const DRIVER_RATING_TAGS = ["Polite", "On Time", "Respectful", "Easy Pickup", "Safe"];
+  // SOS freeze — true while an SOS alert is SENT/RECEIVED on this ride
+  const [sosActive, setSosActive] = useState(false);
 
   // Activate GPS tracking when trip starts (stops automatically when tripStarted becomes false)
   useDriverGPS(tripStarted && acceptedRide ? acceptedRide.id : null);
@@ -732,25 +734,35 @@ export function DriverRequestFeed({
           </div>
         </div>
         {/* SOS — driver can trigger or receive alerts during an active trip */}
-        <SOSButton rideId={acceptedRide.id} viewerRole="DRIVER" />
+        <SOSButton rideId={acceptedRide.id} viewerRole="DRIVER" onSOSActive={setSosActive} />
+
+        {/* SOS Active Banner — freezes ride controls */}
+        {sosActive && (
+          <div className="shrink-0 bg-[#ef4444] px-4 py-3 flex items-center gap-2">
+            <div className="size-2 rounded-full bg-white animate-ping" />
+            <span className="font-mono text-[10px] text-white tracking-[1px] font-bold">
+              ⚠ SOS ACTIVE — CONTROLS FROZEN
+            </span>
+          </div>
+        )}
         {/* END TRIP — driver presses when rider has been dropped off */}
         <div className="p-4 border-t border-[#e5e7eb] shrink-0 flex flex-col gap-2">
           <button
             onClick={handleEndTrip}
-            disabled={endingTrip || simulatingTrip}
+            disabled={endingTrip || simulatingTrip || sosActive}
             className="w-full h-[44px] bg-[#10b981] flex items-center justify-center gap-2 hover:bg-green-600 transition-colors disabled:opacity-50"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 7H12M7 2L12 7L7 12" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="font-mono text-[11px] text-white tracking-[0.5px]">
-              {endingTrip ? "ENDING..." : "END TRIP"}
+              {endingTrip ? "ENDING..." : sosActive ? "SOS ACTIVE..." : "END TRIP"}
             </span>
           </button>
           {/* DEV-ONLY: immediately end trip */}
           <button
             onClick={handleEndTrip}
-            disabled={endingTrip || simulatingTrip}
+            disabled={endingTrip || simulatingTrip || sosActive}
             className="w-full h-[32px] border border-dashed border-[#f59e0b] flex items-center justify-center gap-1.5 hover:bg-[#fef3c7] transition-colors disabled:opacity-40"
           >
             <span className="font-mono text-[9px] text-[#92400e] tracking-[0.5px]">

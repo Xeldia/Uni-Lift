@@ -18,7 +18,16 @@ interface SOSOverlayProps {
 }
 
 // ─── Floating SOS trigger button ──────────────────────────────────────────────
-export function SOSButton({ rideId, viewerRole }: { rideId: string | null; viewerRole: "RIDER" | "DRIVER" }) {
+export function SOSButton({
+  rideId,
+  viewerRole,
+  onSOSActive,
+}: {
+  rideId: string | null;
+  viewerRole: "RIDER" | "DRIVER";
+  /** Fires true when SOS is active (controls should freeze), false when cleared */
+  onSOSActive?: (active: boolean) => void;
+}) {
   const [state, setState] = useState<SOSState>("IDLE");
   const [activeAlert, setActiveAlert] = useState<SOSAlert | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -74,6 +83,13 @@ export function SOSButton({ rideId, viewerRole }: { rideId: string | null; viewe
   };
 
   const dismiss = () => setState("IDLE");
+
+  // Notify parent whenever SOS becomes active or inactive
+  useEffect(() => {
+    const active = state === "SENT" || state === "RECEIVED";
+    onSOSActive?.(active);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <>

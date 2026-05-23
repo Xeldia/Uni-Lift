@@ -1024,6 +1024,19 @@ export async function assignSOS(alertId: string, assignee: string) {
 }
 
 /**
+ * Marks an SOS alert as having emergency services called (simulation).
+ * Records a timestamp in assigned_to so the admin panel can display it.
+ */
+export async function callEmergencyForSOS(alertId: string) {
+  const calledAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const { error } = await supabase
+    .from("sos_alerts")
+    .update({ assigned_to: `EMERGENCY SERVICES · Dispatched at ${calledAt}` })
+    .eq("id", alertId);
+  return { error };
+}
+
+/**
  * Removes the avatar file from storage and clears users.avatar_url.
  * Silently ignores "Not Found" errors from storage (file already gone).
  */
