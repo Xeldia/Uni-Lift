@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,7 +25,8 @@ const allowedOrigins = new Set(
 const apiCors = cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.has(origin)) callback(null, true);
-    else callback(new Error(`CORS: origin ${origin} not allowed`));
+    // Deny without throwing — throwing calls next(err) → Express returns HTML 500
+    else callback(null, false);
   },
   credentials: true,
 });
@@ -71,6 +72,14 @@ if (staticDir) {
 // ─── Global 404 fallback ──────────────────────────────────────────────────────
 app.use((_req, res) => {
   sendError(res, 404, "Route not found");
+});
+
+// ─── Global error handler (must be last, 4-arg signature) ────────────────────
+// Catches any next(err) calls (e.g. body-parser failures) and returns JSON
+// instead of Express's default HTML error page.
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[UNHANDLED ERROR]", err.message, err.stack);
+  sendError(res, 500, err.message || "Internal server error");
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

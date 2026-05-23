@@ -268,7 +268,10 @@ export const usersService = {
     }
 
     const { data, error } = await usersRepository.setUserRoleById(userId, { role: dbRole, updated_at: new Date().toISOString() });
-    if (error) throw new HttpError(500, error.message);
+    if (error) {
+      console.error("[setUserRole] DB update failed:", error);
+      throw new HttpError(500, error.message);
+    }
 
     // Best-effort — update driver verification fields (may fail if migration not applied)
     try {
@@ -327,7 +330,10 @@ export const usersService = {
   async revokeDriver(userId: string, reason: string) {
     // Core update — role change (always works)
     const { data, error } = await usersRepository.revokeDriverById(userId, reason);
-    if (error) throw new HttpError(500, error.message);
+    if (error) {
+      console.error("[revokeDriver] DB update failed:", error);
+      throw new HttpError(500, error.message);
+    }
     // Best-effort — update verification status (may fail if migration not applied)
     try {
       await usersRepository.revokeDriverVerificationById(userId, reason);

@@ -1099,11 +1099,13 @@ async function apiFetch(path: string, init?: RequestInit) {
   }
   const json = await res.json().catch(() => null);
   if (!res.ok) {
+    // Backend sendError wraps message in { error: { message, details } }
     const message =
+      json?.error?.message ||
       json?.error ||
       json?.message ||
       `Request failed (${res.status})`;
-    return { data: null, error: new Error(message) };
+    return { data: null, error: new Error(String(message)) };
   }
   // Backend uses { success, data } envelope via sendSuccess
   return { data: json?.data ?? json, error: null as Error | null };
