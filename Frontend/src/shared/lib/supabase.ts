@@ -1070,8 +1070,8 @@ export interface AdminUser {
 }
 
 const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_BASE_URL ||
-  "http://localhost:3001";
+  (import.meta as any).env?.VITE_API_BASE_URL ??
+  "";
 
 async function apiFetch(path: string, init?: RequestInit) {
   const { data: { session } } = await supabase.auth.getSession();

@@ -8,6 +8,8 @@ services:
         fromEnvVar: VITE_SUPABASE_URL
       - key: VITE_SUPABASE_ANON_KEY
         fromEnvVar: VITE_SUPABASE_ANON_KEY
+      - key: VITE_API_BASE_URL
+        value: ""
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -20,3 +22,5 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+      - key: CORS_ORIGIN
+        value: https://uni-lift.onrender.com
