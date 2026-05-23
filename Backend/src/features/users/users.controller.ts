@@ -29,6 +29,22 @@ router.get("/", requireAuth, requireAdmin, async (_req, res) => {
   }
 });
 
+router.post("/me/driver-verification", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user as any;
+    const { fullAddress, college, course, plateNumber, licenseNumber } = req.body;
+    requireString(fullAddress, "fullAddress");
+    requireString(college, "college");
+    requireString(course, "course");
+    requireString(plateNumber, "plateNumber");
+    requireString(licenseNumber, "licenseNumber");
+    const data = await usersService.submitDriverVerification(user.id, { fullAddress, college, course, plateNumber, licenseNumber });
+    sendSuccess(res, data, 201);
+  } catch (error) {
+    handleControllerError(error, res);
+  }
+});
+
 router.get("/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const targetUserId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

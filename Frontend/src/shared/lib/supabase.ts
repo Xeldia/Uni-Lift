@@ -1352,22 +1352,19 @@ export interface DriverVerificationApplicationInput {
 }
 
 export async function submitDriverVerificationRequest(
-  userId: string,
+  _userId: string,
   input: DriverVerificationApplicationInput
 ) {
-  const { error } = await supabase
-    .from("users")
-    .update({
-      driver_verification_status: "PENDING",
-      driver_full_address: input.fullAddress,
-      driver_college: input.college,
-      driver_course: input.course,
-      driver_plate_number: input.plateNumber,
-      driver_license_number: input.licenseNumber,
-      driver_rejection_reason: null,
-      driver_verified_at: null,
-    })
-    .eq("id", userId);
+  const { error } = await apiFetch("/api/users/me/driver-verification", {
+    method: "POST",
+    body: JSON.stringify({
+      fullAddress: input.fullAddress,
+      college: input.college,
+      course: input.course,
+      plateNumber: input.plateNumber,
+      licenseNumber: input.licenseNumber,
+    }),
+  });
   return { error };
 }
 

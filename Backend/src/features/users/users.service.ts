@@ -343,6 +343,25 @@ export const usersService = {
     return data;
   },
 
+  async submitDriverVerification(userId: string, payload: {
+    fullAddress: string;
+    college: string;
+    course: string;
+    plateNumber: string;
+    licenseNumber: string;
+  }) {
+    const { data: existing, error: fetchErr } = await usersRepository.getUserById(userId);
+    if (fetchErr || !existing) throw new HttpError(404, "User not found");
+
+    const status = String((existing as any).driver_verification_status ?? "").toUpperCase();
+    if (status === "PENDING") throw new HttpError(409, "Verification already pending review");
+    if (status === "APPROVED") throw new HttpError(409, "Driver verification already approved");
+
+    const { data, error } = await usersRepository.submitDriverVerificationById(userId, payload);
+    if (error) throw new HttpError(500, error.message);
+    return data;
+  },
+
   async getAccountPendingQueue() {
     const { data, error } = await usersRepository.listAccountPendingUsers();
     if (error) throw new HttpError(500, error.message);

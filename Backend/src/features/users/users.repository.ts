@@ -182,6 +182,31 @@ export const usersRepository = {
       .limit(100);
   },
 
+  submitDriverVerificationById(userId: string, payload: {
+    fullAddress: string;
+    college: string;
+    course: string;
+    plateNumber: string;
+    licenseNumber: string;
+  }) {
+    return supabaseAdmin
+      .from("users")
+      .update({
+        driver_verification_status: "PENDING",
+        driver_full_address: payload.fullAddress,
+        driver_college: payload.college,
+        driver_course: payload.course,
+        driver_plate_number: payload.plateNumber,
+        driver_license_number: payload.licenseNumber,
+        driver_rejection_reason: null,
+        driver_verified_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .select()
+      .single();
+  },
+
   approveAccountVerificationById(userId: string) {
     return supabaseAdmin
       .from("users")
