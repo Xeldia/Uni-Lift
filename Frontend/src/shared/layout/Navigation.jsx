@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useTheme } from "next-themes";
 import imgLogo from "../../assets/logo.png";
-import { signOut, supabase } from "../lib/supabase";
+import { signOut, supabase, submitDriverVerificationRequest } from "../lib/supabase";
 import { useThemeSync } from "../hooks/useThemeSync";
 
 export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
@@ -12,6 +12,17 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
   useThemeSync();
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+
+  // Driver gate state
+  const [driverModal, setDriverModal] = useState(null); // null | "form" | "pending" | "submitted"
+  const [driverStatus, setDriverStatus] = useState(null);
+  const [driverRejectionReason, setDriverRejectionReason] = useState("");
+  const [driverChecking, setDriverChecking] = useState(false);
+  const [driverSubmitting, setDriverSubmitting] = useState(false);
+  const [driverFormError, setDriverFormError] = useState("");
+  const [driverForm, setDriverForm] = useState({
+    fullAddress: "", college: "", course: "", plateNumber: "", licenseNumber: "",
+  });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -54,6 +65,61 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
   const handleLogout = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleDriverModeClick = async () => {
+    if (mode === "DRIVER") return; // already driver, no gate needed
+    setDriverChecking(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setDriverChecking(false); return; }
+
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role, driver_verification_status, driver_rejection_reason")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    setDriverChecking(false);
+
+    const role = (profile?.role ?? "").toLowerCase();
+    const verStatus = profile?.driver_verification_status ?? "NOT_SUBMITTED";
+    const canDrive = role === "driver" || role === "both" || role === "admin";
+
+    if (canDrive && verStatus === "APPROVED") {
+      onModeToggle?.("DRIVER");
+      return;
+    }
+
+    setDriverStatus(verStatus);
+    setDriverRejectionReason(profile?.driver_rejection_reason ?? "");
+    setDriverForm({ fullAddress: "", college: "", course: "", plateNumber: "", licenseNumber: "" });
+    setDriverFormError("");
+
+    if (verStatus === "PENDING") {
+      setDriverModal("pending");
+    } else {
+      setDriverModal("form");
+    }
+  };
+
+  const handleDriverFormSubmit = async (e) => {
+    e.preventDefault();
+    const { fullAddress, college, course, plateNumber, licenseNumber } = driverForm;
+    if (!fullAddress || !college || !course || !plateNumber || !licenseNumber) {
+      setDriverFormError("All fields are required.");
+      return;
+    }
+    setDriverSubmitting(true);
+    setDriverFormError("");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setDriverSubmitting(false); return; }
+    const { error } = await submitDriverVerificationRequest(user.id, driverForm);
+    setDriverSubmitting(false);
+    if (error) {
+      setDriverFormError(error.message || "Submission failed.");
+    } else {
+      setDriverModal("submitted");
+    }
   };
 
   return (
@@ -138,12 +204,13 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
               RIDER
             </button>
             <button
-              onClick={() => onModeToggle?.("DRIVER")}
-              className={`h-full px-3 font-mono text-[9px] tracking-[0.45px] flex items-center gap-1 transition-colors ${
+              onClick={handleDriverModeClick}
+              disabled={driverChecking}
+              className={`h-full px-3 font-mono text-[9px] tracking-[0.45px] flex items-center gap-1 transition-colors disabled:opacity-60 ${
                 mode === "DRIVER" ? "bg-black text-white" : "bg-white text-black"
               }`}
             >
-              DRIVER
+              {driverChecking ? "..." : "DRIVER"}
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                 <path
                   d="M3 6L5 4L3 2"
@@ -211,6 +278,135 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
           </button>
         </div>
       </div>
+      {/* Driver verification gate modal */}
+      {driverModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white border border-black w-full max-w-[480px] mx-4 flex flex-col">
+
+            {/* Header */}
+            <div className="bg-black px-4 py-3 flex items-center justify-between">
+              <span className="font-mono text-[10px] text-white tracking-[1px]">
+                {driverModal === "pending" && "APPLICATION UNDER REVIEW"}
+                {driverModal === "form" && (driverStatus === "REJECTED" ? "RESUBMIT DRIVER APPLICATION" : driverStatus === "REVOKED" ? "DRIVER ACCESS REVOKED" : "DRIVER APPLICATION")}
+                {driverModal === "submitted" && "APPLICATION SUBMITTED"}
+              </span>
+              <button
+                onClick={() => setDriverModal(null)}
+                className="text-white font-mono text-[14px] leading-none hover:opacity-70"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 flex flex-col gap-4">
+
+              {/* PENDING state */}
+              {driverModal === "pending" && (
+                <>
+                  <div className="border border-[#f59e0b] bg-[#fef3c7] px-3 py-2">
+                    <p className="font-mono text-[9px] tracking-[0.5px] text-[#92400e]">
+                      Your driver application is currently under admin review. You will be notified once a decision is made.
+                    </p>
+                  </div>
+                  <p className="font-mono text-[9px] text-[#666] tracking-[0.3px]">
+                    Driver mode will be unlocked automatically once your application is approved.
+                  </p>
+                  <button
+                    onClick={() => setDriverModal(null)}
+                    className="w-full h-[34px] bg-black text-white font-mono text-[9px] tracking-[1px] hover:bg-[#222] transition-colors"
+                  >
+                    GOT IT
+                  </button>
+                </>
+              )}
+
+              {/* SUBMITTED success state */}
+              {driverModal === "submitted" && (
+                <>
+                  <div className="border border-[#10b981] bg-[#d1fae5] px-3 py-2">
+                    <p className="font-mono text-[9px] tracking-[0.5px] text-[#065f46]">
+                      Application submitted successfully. An admin will review your documents and notify you.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDriverModal(null)}
+                    className="w-full h-[34px] bg-black text-white font-mono text-[9px] tracking-[1px] hover:bg-[#222] transition-colors"
+                  >
+                    CLOSE
+                  </button>
+                </>
+              )}
+
+              {/* FORM state (NOT_SUBMITTED / REJECTED / REVOKED) */}
+              {driverModal === "form" && (
+                <form onSubmit={handleDriverFormSubmit} className="flex flex-col gap-3">
+
+                  {driverStatus === "REJECTED" && (
+                    <div className="border border-[#ef4444] bg-[#fef2f2] px-3 py-2">
+                      <p className="font-mono text-[9px] tracking-[0.5px] text-[#991b1b]">
+                        <span className="font-bold">REJECTED:</span>{" "}
+                        {driverRejectionReason || "Your previous application was rejected. Please resubmit."}
+                      </p>
+                    </div>
+                  )}
+
+                  {driverStatus === "REVOKED" && (
+                    <div className="border border-[#ef4444] bg-[#fef2f2] px-3 py-2">
+                      <p className="font-mono text-[9px] tracking-[0.5px] text-[#991b1b]">
+                        Your driver access was revoked by an admin. You may reapply below.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="font-mono text-[9px] text-[#666] tracking-[0.3px]">
+                    Fill out the form below. An admin will review your application before granting driver mode access.
+                  </p>
+
+                  {[
+                    { key: "fullAddress", label: "HOME ADDRESS" },
+                    { key: "college",     label: "COLLEGE / SCHOOL" },
+                    { key: "course",      label: "COURSE / PROGRAM" },
+                    { key: "plateNumber", label: "PLATE NUMBER" },
+                    { key: "licenseNumber", label: "DRIVER LICENSE NO." },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex flex-col gap-1">
+                      <label className="font-mono text-[8px] text-[#666] tracking-[0.8px]">{label}</label>
+                      <input
+                        type="text"
+                        value={driverForm[key]}
+                        onChange={(e) => setDriverForm((f) => ({ ...f, [key]: e.target.value }))}
+                        className="border border-black px-2 h-[30px] font-mono text-[10px] outline-none focus:ring-1 focus:ring-black w-full"
+                        disabled={driverSubmitting}
+                      />
+                    </div>
+                  ))}
+
+                  {driverFormError && (
+                    <p className="font-mono text-[9px] text-[#ef4444] tracking-[0.3px]">{driverFormError}</p>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setDriverModal(null)}
+                      className="flex-1 h-[34px] border border-black font-mono text-[9px] tracking-[1px] hover:bg-gray-50 transition-colors"
+                    >
+                      CANCEL
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={driverSubmitting}
+                      className="flex-1 h-[34px] bg-black text-white font-mono text-[9px] tracking-[1px] hover:bg-[#222] transition-colors disabled:opacity-50"
+                    >
+                      {driverSubmitting ? "SUBMITTING..." : "SUBMIT APPLICATION"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
