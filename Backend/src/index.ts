@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 
+import authRouter from "./features/auth/auth.controller.js";
 import usersRouter from "./features/users/users.controller.js";
 import ridesRouter from "./features/rides/rides.controller.js";
 import verificationsRouter from "./features/admin/verifications/verifications.controller.js";
@@ -38,6 +39,7 @@ app.get("/health", (_req, res) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/rides", ridesRouter);
 app.use("/api/verifications", verificationsRouter);
