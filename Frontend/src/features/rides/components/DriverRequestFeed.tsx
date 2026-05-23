@@ -1,5 +1,5 @@
 /* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-nested-conditional, no-negated-condition, no-array-index-key */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useRideLifecycle } from "../hooks/useRideLifecycle";
 import { useDriverGPS } from "../hooks/useDriverGPS";
@@ -295,6 +295,9 @@ export function DriverRequestFeed({
   const DRIVER_RATING_TAGS = ["Polite", "On Time", "Respectful", "Easy Pickup", "Safe"];
   // SOS freeze — true while an SOS alert is SENT/RECEIVED on this ride
   const [sosActive, setSosActive] = useState(false);
+  // Ref so async simulation loop can read latest sosActive without stale closure
+  const sosActiveRef = useRef(false);
+  useEffect(() => { sosActiveRef.current = sosActive; }, [sosActive]);
 
   // Activate GPS tracking when trip starts (stops automatically when tripStarted becomes false)
   useDriverGPS(tripStarted && acceptedRide ? acceptedRide.id : null);
@@ -582,6 +585,12 @@ export function DriverRequestFeed({
         });
 
     for (let i = 0; i < routePoints.length; i++) {
+      // Abort GPS broadcast if SOS becomes active mid-simulation
+      if (sosActiveRef.current) {
+        console.warn("[simulate] SOS active — aborting GPS broadcast");
+        setSimulatingTrip(false);
+        return;
+      }
       await new Promise<void>((resolve) => setTimeout(resolve, STEP_MS));
       const point = routePoints[i];
       await updateDriverGPS(acceptedRide.id, point.lat, point.lng);
