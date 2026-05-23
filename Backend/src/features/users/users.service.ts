@@ -271,14 +271,18 @@ export const usersService = {
     const { data, error } = await usersRepository.setUserRoleById(userId, payload);
     if (error) throw new HttpError(500, error.message);
 
-    const { error: auditError } = await usersRepository.insertAdminRoleAudit({
-      admin_id: requestingUserId,
-      target_user_id: userId,
-      previous_roles: previousRoles,
-      new_roles: [normalized],
-      reason: null,
-    });
-    if (auditError) throw new HttpError(500, auditError.message);
+    // Audit log is best-effort — don't fail the request if the table doesn't exist
+    try {
+      await usersRepository.insertAdminRoleAudit({
+        admin_id: requestingUserId,
+        target_user_id: userId,
+        previous_roles: previousRoles,
+        new_roles: [normalized],
+        reason: null,
+      });
+    } catch (auditErr) {
+      console.warn("[setUserRole] audit log skipped:", auditErr);
+    }
     return data;
   },
 

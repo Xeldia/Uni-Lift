@@ -115,7 +115,7 @@ export const usersRepository = {
     return supabaseAdmin
       .from("users")
       .update({
-        role: "RIDER",
+        role: "rider",
         driver_verification_status: "REVOKED",
         driver_rejection_reason: reason || "Driver permission revoked by admin",
         driver_status: "OFFLINE",
