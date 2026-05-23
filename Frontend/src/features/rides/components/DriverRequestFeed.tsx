@@ -295,9 +295,8 @@ export function DriverRequestFeed({
   const DRIVER_RATING_TAGS = ["Polite", "On Time", "Respectful", "Easy Pickup", "Safe"];
   // SOS freeze — true while an SOS alert is SENT/RECEIVED on this ride
   const [sosActive, setSosActive] = useState(false);
-  // Ref so async simulation loop can read latest sosActive without stale closure
-  const sosActiveRef = useRef(false);
-  useEffect(() => { sosActiveRef.current = sosActive; }, [sosActive]);
+  // Direct ref for the simulation loop — set synchronously so no effect-cycle lag
+  const cancelSimRef = useRef(false);
 
   // Activate GPS tracking when trip starts (stops automatically when tripStarted becomes false)
   useDriverGPS(tripStarted && acceptedRide ? acceptedRide.id : null);
@@ -555,6 +554,7 @@ export function DriverRequestFeed({
   // Each GPS write fires the rider’s subscribeToRideGPS subscription so the pin moves.
   const handleSimulateTrip = async () => {
     if (!acceptedRide || simulatingTrip) return;
+    cancelSimRef.current = false; // reset abort flag for this run
     setSimulatingTrip(true);
 
     // 1. Start the trip
@@ -586,12 +586,18 @@ export function DriverRequestFeed({
 
     for (let i = 0; i < routePoints.length; i++) {
       // Abort GPS broadcast if SOS becomes active mid-simulation
-      if (sosActiveRef.current) {
+      if (cancelSimRef.current) {
         console.warn("[simulate] SOS active — aborting GPS broadcast");
         setSimulatingTrip(false);
         return;
       }
       await new Promise<void>((resolve) => setTimeout(resolve, STEP_MS));
+      // Check again after the wait (SOS may have fired during the delay)
+      if (cancelSimRef.current) {
+        console.warn("[simulate] SOS fired during wait — aborting");
+        setSimulatingTrip(false);
+        return;
+      }
       const point = routePoints[i];
       await updateDriverGPS(acceptedRide.id, point.lat, point.lng);
       // Throttle map updates to every 4th step (~1 s interval) to prevent render thrash
@@ -743,7 +749,14 @@ export function DriverRequestFeed({
           </div>
         </div>
         {/* SOS — driver can trigger or receive alerts during an active trip */}
-        <SOSButton rideId={acceptedRide.id} viewerRole="DRIVER" onSOSActive={setSosActive} />
+        <SOSButton
+          rideId={acceptedRide.id}
+          viewerRole="DRIVER"
+          onSOSActive={(active) => {
+            setSosActive(active);
+            cancelSimRef.current = active; // sync: loop sees this immediately
+          }}
+        />
 
         {/* SOS Active Banner — freezes ride controls */}
         {sosActive && (
