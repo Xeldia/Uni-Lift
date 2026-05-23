@@ -123,6 +123,7 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
   };
 
   return (
+    <>
     <nav className="bg-white h-[52px] shrink-0 w-full border-b border-black relative z-10">
       <div className="flex items-center justify-between h-full px-4">
 
@@ -278,9 +279,11 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
           </button>
         </div>
       </div>
-      {/* Driver verification gate modal */}
+    </nav>
+
+      {/* Driver verification gate modal — outside nav so map stacking context can't block it */}
       {driverModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
           <div className="bg-white border border-black w-full max-w-[480px] mx-4 flex flex-col">
 
             {/* Header */}
@@ -407,7 +410,7 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 }
 
