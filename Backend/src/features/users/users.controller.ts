@@ -32,13 +32,18 @@ router.get("/", requireAuth, requireAdmin, async (_req, res) => {
 router.post("/me/driver-verification", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user as any;
-    const { fullAddress, college, course, plateNumber, licenseNumber } = req.body;
+    const { fullAddress, college, course, plateNumber, licenseNumber, licenseFrontUrl, licenseBackUrl, vehicleRegUrl } = req.body;
     requireString(fullAddress, "fullAddress");
     requireString(college, "college");
     requireString(course, "course");
     requireString(plateNumber, "plateNumber");
     requireString(licenseNumber, "licenseNumber");
-    const data = await usersService.submitDriverVerification(user.id, { fullAddress, college, course, plateNumber, licenseNumber });
+    const data = await usersService.submitDriverVerification(user.id, {
+      fullAddress, college, course, plateNumber, licenseNumber,
+      licenseFrontUrl: typeof licenseFrontUrl === "string" ? licenseFrontUrl : undefined,
+      licenseBackUrl: typeof licenseBackUrl === "string" ? licenseBackUrl : undefined,
+      vehicleRegUrl: typeof vehicleRegUrl === "string" ? vehicleRegUrl : undefined,
+    });
     sendSuccess(res, data, 201);
   } catch (error) {
     handleControllerError(error, res);

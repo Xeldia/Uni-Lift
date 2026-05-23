@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useTheme } from "next-themes";
 import imgLogo from "../../assets/logo.png";
-import { signOut, supabase, submitDriverVerificationRequest } from "../lib/supabase";
+import { signOut, supabase, submitDriverVerificationRequest, uploadVerificationDocToStorage } from "../lib/supabase";
 import { useThemeSync } from "../hooks/useThemeSync";
 
 export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
@@ -22,6 +22,9 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
   const [driverFormError, setDriverFormError] = useState("");
   const [driverForm, setDriverForm] = useState({
     fullAddress: "", college: "", course: "", plateNumber: "", licenseNumber: "",
+  });
+  const [driverFiles, setDriverFiles] = useState({
+    licenseFront: null, licenseBack: null, vehicleReg: null,
   });
 
   useEffect(() => {
@@ -93,6 +96,7 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
     setDriverStatus(verStatus);
     setDriverRejectionReason(profile?.driver_rejection_reason ?? "");
     setDriverForm({ fullAddress: "", college: "", course: "", plateNumber: "", licenseNumber: "" });
+    setDriverFiles({ licenseFront: null, licenseBack: null, vehicleReg: null });
     setDriverFormError("");
 
     if (verStatus === "PENDING") {
@@ -113,7 +117,19 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
     setDriverFormError("");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setDriverSubmitting(false); return; }
-    const { error } = await submitDriverVerificationRequest(user.id, driverForm);
+
+    let licenseFrontUrl, licenseBackUrl, vehicleRegUrl;
+    try {
+      if (driverFiles.licenseFront) licenseFrontUrl = await uploadVerificationDocToStorage(user.id, driverFiles.licenseFront, "license_front_url");
+      if (driverFiles.licenseBack) licenseBackUrl = await uploadVerificationDocToStorage(user.id, driverFiles.licenseBack, "license_back_url");
+      if (driverFiles.vehicleReg) vehicleRegUrl = await uploadVerificationDocToStorage(user.id, driverFiles.vehicleReg, "vehicle_reg_url");
+    } catch (uploadErr) {
+      setDriverSubmitting(false);
+      setDriverFormError(uploadErr.message || "Document upload failed.");
+      return;
+    }
+
+    const { error } = await submitDriverVerificationRequest(user.id, { ...driverForm, licenseFrontUrl, licenseBackUrl, vehicleRegUrl });
     setDriverSubmitting(false);
     if (error) {
       setDriverFormError(error.message || "Submission failed.");
@@ -383,6 +399,29 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
                       />
                     </div>
                   ))}
+
+                  <div className="border-t border-[#e5e7eb] pt-3 flex flex-col gap-3">
+                    <p className="font-mono text-[8px] text-[#666] tracking-[0.8px]">DOCUMENTS (optional but recommended)</p>
+                    {[
+                      { key: "licenseFront", label: "DRIVER LICENSE (FRONT)" },
+                      { key: "licenseBack",  label: "DRIVER LICENSE (BACK)" },
+                      { key: "vehicleReg",   label: "VEHICLE REGISTRATION / PLATE PHOTO" },
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex flex-col gap-1">
+                        <label className="font-mono text-[8px] text-[#666] tracking-[0.8px]">{label}</label>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,application/pdf"
+                          onChange={(e) => setDriverFiles((f) => ({ ...f, [key]: e.target.files?.[0] ?? null }))}
+                          className="font-mono text-[9px] text-black file:border file:border-black file:bg-white file:font-mono file:text-[8px] file:px-2 file:py-1 file:mr-2 file:cursor-pointer"
+                          disabled={driverSubmitting}
+                        />
+                        {driverFiles[key] && (
+                          <p className="font-mono text-[8px] text-[#10b981]">{driverFiles[key].name}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
                   {driverFormError && (
                     <p className="font-mono text-[9px] text-[#ef4444] tracking-[0.3px]">{driverFormError}</p>

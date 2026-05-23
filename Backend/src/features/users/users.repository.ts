@@ -188,7 +188,11 @@ export const usersRepository = {
     course: string;
     plateNumber: string;
     licenseNumber: string;
+    licenseFrontUrl?: string;
+    licenseBackUrl?: string;
+    vehicleRegUrl?: string;
   }) {
+    const now = new Date().toISOString();
     return supabaseAdmin
       .from("users")
       .update({
@@ -198,9 +202,13 @@ export const usersRepository = {
         driver_course: payload.course,
         driver_plate_number: payload.plateNumber,
         driver_license_number: payload.licenseNumber,
+        license_front_url: payload.licenseFrontUrl ?? null,
+        license_back_url: payload.licenseBackUrl ?? null,
+        vehicle_reg_url: payload.vehicleRegUrl ?? null,
+        docs_submitted_at: now,
         driver_rejection_reason: null,
         driver_verified_at: null,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       })
       .eq("id", userId)
       .select()

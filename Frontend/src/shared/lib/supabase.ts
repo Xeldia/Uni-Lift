@@ -1353,7 +1353,11 @@ export interface DriverVerificationApplicationInput {
 
 export async function submitDriverVerificationRequest(
   _userId: string,
-  input: DriverVerificationApplicationInput
+  input: DriverVerificationApplicationInput & {
+    licenseFrontUrl?: string;
+    licenseBackUrl?: string;
+    vehicleRegUrl?: string;
+  }
 ) {
   const { error } = await apiFetch("/api/users/me/driver-verification", {
     method: "POST",
@@ -1363,6 +1367,9 @@ export async function submitDriverVerificationRequest(
       course: input.course,
       plateNumber: input.plateNumber,
       licenseNumber: input.licenseNumber,
+      licenseFrontUrl: input.licenseFrontUrl,
+      licenseBackUrl: input.licenseBackUrl,
+      vehicleRegUrl: input.vehicleRegUrl,
     }),
   });
   return { error };
@@ -1825,6 +1832,25 @@ export function subscribeToConversation(
     )
     .subscribe();
   return () => supabase.removeChannel(channel);
+}
+
+// ─── Driver Verification Document Storage Upload (URL only, no DB write) ──────
+
+export async function uploadVerificationDocToStorage(
+  userId: string,
+  file: File,
+  kind: "license_front_url" | "license_back_url" | "vehicle_reg_url"
+): Promise<string> {
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const filePath = `${userId}/${kind}.${ext}`;
+  const { error: storageError } = await supabase.storage
+    .from("verification-docs")
+    .upload(filePath, file, { upsert: true });
+  if (storageError) throw new Error(storageError.message);
+  const { data: urlData } = supabase.storage
+    .from("verification-docs")
+    .getPublicUrl(filePath);
+  return `${urlData.publicUrl}?t=${Date.now()}`;
 }
 
 // ─── Driver Verification Document Upload ──────────────────────────────────────

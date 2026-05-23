@@ -349,6 +349,9 @@ export const usersService = {
     course: string;
     plateNumber: string;
     licenseNumber: string;
+    licenseFrontUrl?: string;
+    licenseBackUrl?: string;
+    vehicleRegUrl?: string;
   }) {
     const { data: existing, error: fetchErr } = await usersRepository.getUserById(userId);
     if (fetchErr || !existing) throw new HttpError(404, "User not found");
