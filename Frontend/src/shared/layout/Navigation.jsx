@@ -119,14 +119,17 @@ export function Navigation({ activePage, mode = "RIDER", onModeToggle }) {
     if (!user) { setDriverSubmitting(false); return; }
 
     let licenseFrontUrl, licenseBackUrl, vehicleRegUrl;
-    try {
-      if (driverFiles.licenseFront) licenseFrontUrl = await uploadVerificationDocToStorage(user.id, driverFiles.licenseFront, "license_front_url");
-      if (driverFiles.licenseBack) licenseBackUrl = await uploadVerificationDocToStorage(user.id, driverFiles.licenseBack, "license_back_url");
-      if (driverFiles.vehicleReg) vehicleRegUrl = await uploadVerificationDocToStorage(user.id, driverFiles.vehicleReg, "vehicle_reg_url");
-    } catch (uploadErr) {
-      setDriverSubmitting(false);
-      setDriverFormError(uploadErr.message || "Document upload failed.");
-      return;
+    if (driverFiles.licenseFront) {
+      try { licenseFrontUrl = await uploadVerificationDocToStorage(user.id, driverFiles.licenseFront, "license_front_url"); }
+      catch (e) { console.warn("License front upload failed:", e); }
+    }
+    if (driverFiles.licenseBack) {
+      try { licenseBackUrl = await uploadVerificationDocToStorage(user.id, driverFiles.licenseBack, "license_back_url"); }
+      catch (e) { console.warn("License back upload failed:", e); }
+    }
+    if (driverFiles.vehicleReg) {
+      try { vehicleRegUrl = await uploadVerificationDocToStorage(user.id, driverFiles.vehicleReg, "vehicle_reg_url"); }
+      catch (e) { console.warn("Vehicle reg upload failed:", e); }
     }
 
     const { error } = await submitDriverVerificationRequest(user.id, { ...driverForm, licenseFrontUrl, licenseBackUrl, vehicleRegUrl });
