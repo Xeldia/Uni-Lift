@@ -267,8 +267,26 @@ export const usersService = {
       payload.driver_verified_at = new Date().toISOString();
     }
 
-    const { data, error } = await usersRepository.setUserRoleById(userId, payload);
+    const { data, error } = await usersRepository.setUserRoleById(userId, { role: dbRole, updated_at: new Date().toISOString() });
     if (error) throw new HttpError(500, error.message);
+
+    // Best-effort — update driver verification fields (may fail if migration not applied)
+    try {
+      const verificationPayload: Record<string, unknown> = {};
+      if (!driverCapableRoles.includes(normalized)) {
+        verificationPayload.driver_verification_status = "REVOKED";
+        verificationPayload.driver_rejection_reason = "Driver access removed by admin role update.";
+      } else {
+        verificationPayload.driver_verification_status = "APPROVED";
+        verificationPayload.driver_rejection_reason = null;
+        verificationPayload.driver_verified_at = new Date().toISOString();
+      }
+      if (Object.keys(verificationPayload).length > 0) {
+        await usersRepository.setUserRoleById(userId, verificationPayload);
+      }
+    } catch (e) {
+      console.warn("[setUserRole] verification fields skipped:", e);
+    }
 
     // Audit log is best-effort — don't fail the request if the table doesn't exist
     try {
@@ -307,8 +325,15 @@ export const usersService = {
   },
 
   async revokeDriver(userId: string, reason: string) {
+    // Core update — role change (always works)
     const { data, error } = await usersRepository.revokeDriverById(userId, reason);
     if (error) throw new HttpError(500, error.message);
+    // Best-effort — update verification status (may fail if migration not applied)
+    try {
+      await usersRepository.revokeDriverVerificationById(userId, reason);
+    } catch (e) {
+      console.warn("[revokeDriver] verification fields skipped:", e);
+    }
     return data;
   },
 

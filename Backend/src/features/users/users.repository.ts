@@ -116,13 +116,22 @@ export const usersRepository = {
       .from("users")
       .update({
         role: "rider",
-        driver_verification_status: "REVOKED",
-        driver_rejection_reason: reason || "Driver permission revoked by admin",
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId)
       .select()
       .single();
+  },
+
+  // Best-effort: update driver verification fields (requires migration_driver_verification_workflow.sql)
+  revokeDriverVerificationById(userId: string, reason: string) {
+    return supabaseAdmin
+      .from("users")
+      .update({
+        driver_verification_status: "REVOKED",
+        driver_rejection_reason: reason || "Driver permission revoked by admin",
+      })
+      .eq("id", userId);
   },
 
   listAccountPendingUsers() {
